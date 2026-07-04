@@ -157,9 +157,12 @@
   .deuda-seccion-title{font-size:13px; font-weight:700; margin:16px 0 8px; color:var(--text-dim);}
   .deuda-seccion-title:first-child{margin-top:0;}
 
-  .tarjeta-row{display:flex; gap:8px; align-items:center; background:var(--card2); border-radius:12px; padding:10px 12px; margin-bottom:8px; border:1px solid var(--border);}
-  .tarjeta-row input, .tarjeta-row select{padding:9px 10px; font-size:13px;}
+  .tarjeta-block{background:var(--card2); border-radius:12px; padding:10px 12px; margin-bottom:8px; border:1px solid var(--border);}
+  .tarjeta-row{display:flex; gap:8px; align-items:center; margin-bottom:0;}
+  .tarjeta-row + .tarjeta-row{margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);}
+  .tarjeta-row input, .tarjeta-row select{padding:9px 10px; font-size:13px; background:var(--card);}
   .tarjeta-row .tr-del{cursor:pointer; color:var(--danger); font-size:15px; padding:4px;}
+  .tarjeta-row .ciclo-label{font-size:11px; color:var(--text-dim); white-space:nowrap;}
 
   .whatsapp-aviso{background:rgba(37,211,102,.12); border:1px solid rgba(37,211,102,.35); border-radius:12px; padding:12px; margin-top:10px;}
   .whatsapp-aviso a{display:inline-block; margin-top:8px; background:#25D366; color:#042b16; padding:8px 14px; border-radius:10px; font-size:13px; font-weight:700; text-decoration:none;}
@@ -544,6 +547,35 @@ function getMiembros(){ try { return JSON.parse(getConfig('MiembrosFamilia') || 
 function getNombresMiembros(){ return getMiembros().map(m => m.nombre); }
 function telefonoDe(nombre){ const m = getMiembros().find(x => x.nombre === nombre); return m ? m.telefono : ''; }
 function getTarjetas(){ try { return JSON.parse(getConfig('Tarjetas') || '[]'); } catch(e){ return []; } }
+
+// Dada una tarjeta con {diaCierre, diasParaPago}, calcula: cuándo cierra el
+// próximo ciclo, cuántos días faltan para eso, y si compras HOY, hasta
+// cuándo tendrías para pagarlo (y cuántos días de plazo son en total).
+// Esto es lo que le permite al asesor decir "espera unos días, ganarías
+// casi un mes más de plazo" en vez de solo mirar el límite disponible.
+function calcularCicloTarjeta(tarjeta){
+  const diaCierre = Number(tarjeta.diaCierre);
+  if (!diaCierre) return null;
+  const diasParaPago = Number(tarjeta.diasParaPago) || 20;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  let cierre = new Date(hoy.getFullYear(), hoy.getMonth(), diaCierre);
+  if (hoy > cierre) cierre = new Date(hoy.getFullYear(), hoy.getMonth() + 1, diaCierre);
+  const diasHastaCierre = Math.round((cierre - hoy) / 86400000);
+
+  // una compra de HOY siempre cae en este próximo cierre (por construcción)
+  const fechaPagoSiComprasHoy = new Date(cierre.getTime() + diasParaPago * 86400000);
+  const diasDePlazoSiComprasHoy = Math.round((fechaPagoSiComprasHoy - hoy) / 86400000);
+
+  // si esperas a comprar DESPUÉS del cierre, caería en el siguiente ciclo:
+  // eso significa un cierre un mes después, y por lo tanto ~1 mes más de plazo.
+  const siguienteCierre = new Date(cierre.getFullYear(), cierre.getMonth() + 1, diaCierre);
+  const fechaPagoSiEsperas = new Date(siguienteCierre.getTime() + diasParaPago * 86400000);
+  const diasGanadosSiEsperas = Math.round((fechaPagoSiEsperas - fechaPagoSiComprasHoy) / 86400000);
+
+  return { cierre, diasHastaCierre, fechaPagoSiComprasHoy, diasDePlazoSiComprasHoy, diasGanadosSiEsperas };
+}
+
 function getMetasAhorro(){ try { return JSON.parse(getConfig('MetasAhorro') || '{}'); } catch(e){ return {}; } }
 function getPresupuestos(){ try { return JSON.parse(getConfig('PresupuestosCategoria') || '{}'); } catch(e){ return {}; } }
 function esTrue(v){ return v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1'; }
@@ -793,8 +825,12 @@ function renderTarjetasResumen(){
     const limite = Number(t.limite||0);
     const pct = limite > 0 ? Math.min(100,(usado/limite)*100) : 0;
     const clase = pct>=90?'danger':pct>=70?'warn':'good';
+    const ciclo = calcularCicloTarjeta(t);
+    const cicloTxt = ciclo
+      ? '<div class="mov-meta" style="margin-top:2px;">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
+      : '';
     return '<div class="bar-row"><div class="bar-label"><span>'+t.nombre+' · de '+t.propietario+'</span><span>S/'+usado.toFixed(2)+' / S/'+limite.toFixed(2)+'</span></div>' +
-      '<div class="bar-track"><div class="bar-fill '+clase+'" style="width:'+pct+'%"></div></div></div>';
+      '<div class="bar-track"><div class="bar-fill '+clase+'" style="width:'+pct+'%"></div></div>' + cicloTxt + '</div>';
   }).join('');
 }
 function renderPresupuestosResumen(delMes){
@@ -992,6 +1028,17 @@ function consultarAsesor(){
       if (limite > 0 && (usado+monto) > limite){ razones.push('Con esta compra superarías el límite de '+t.nombre+dueñoTxt+'.'); puntos -= 2; }
       else if (limite > 0 && (usado+monto) > limite*0.85){ razones.push('Quedarías muy cerca del límite de '+t.nombre+dueñoTxt+'.'); puntos -= 1; }
       if (t.propietario !== MI_PERSONA){ razones.push('Es tarjeta de '+t.propietario+' — si la usas, acuerden cómo se divide para no arrastrar la deuda.'); }
+
+      const ciclo = calcularCicloTarjeta(t);
+      if (ciclo){
+        const fechaCierreTxt = ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+        const fechaPagoTxt = ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+        if (ciclo.diasHastaCierre <= 3){
+          razones.push('Con '+t.nombre+' cierra en '+ciclo.diasHastaCierre+' día(s) ('+fechaCierreTxt+'). Si puedes esperar a que cierre, ganarías ~'+ciclo.diasGanadosSiEsperas+' días más de plazo para pagar.');
+        } else {
+          razones.push('Con '+t.nombre+', si compras hoy tendrías hasta el '+fechaPagoTxt+' para pagar ('+ciclo.diasDePlazoSiComprasHoy+' días de plazo).');
+        }
+      }
     }
   });
 
@@ -1540,9 +1587,9 @@ function cerrarModal(id){ document.getElementById(id).classList.remove('active')
 function renderListaMiembrosConfig(){
   const miembros = getMiembros();
   document.getElementById('listaMiembrosConfig').innerHTML = miembros.map((m,i) =>
-    '<div class="tarjeta-row"><input type="text" value="'+m.nombre+'" onchange="renombrarMiembroUI('+i+',this.value)" style="flex:1;">' +
+    '<div class="tarjeta-block"><div class="tarjeta-row"><input type="text" value="'+m.nombre+'" onchange="renombrarMiembroUI('+i+',this.value)" style="flex:1;">' +
     '<input type="tel" value="'+(m.telefono||'')+'" placeholder="Celular" onchange="editarMiembro('+i+',\'telefono\',this.value)" style="flex:1;">' +
-    '<span class="tr-del" onclick="quitarMiembro('+i+')">✕</span></div>'
+    '<span class="tr-del" onclick="quitarMiembro('+i+')">✕</span></div></div>'
   ).join('');
 }
 function editarMiembro(i, campo, valor){
@@ -1602,20 +1649,27 @@ function renderListaTarjetasConfig(){
   const tarjetas = getTarjetas();
   const nombres = getNombresMiembros();
   document.getElementById('listaTarjetasConfig').innerHTML = tarjetas.map((t,i) =>
+    '<div class="tarjeta-block">' +
     '<div class="tarjeta-row"><input type="text" value="'+t.nombre+'" onchange="editarTarjeta('+i+',\'nombre\',this.value)" placeholder="Nombre" style="flex:1.4;">' +
     '<select onchange="editarTarjeta('+i+',\'propietario\',this.value)" style="flex:1;">'+nombres.map(n=>'<option value="'+n+'"'+(n===t.propietario?' selected':'')+'>'+n+'</option>').join('')+'</select>' +
     '<input type="number" value="'+(t.limite||0)+'" onchange="editarTarjeta('+i+',\'limite\',this.value)" placeholder="Límite" style="flex:0.8;">' +
-    '<span class="tr-del" onclick="quitarTarjeta('+i+')">✕</span></div>'
+    '<span class="tr-del" onclick="quitarTarjeta('+i+')">✕</span></div>' +
+    '<div class="tarjeta-row">' +
+    '<span class="ciclo-label">Cierra el día</span><input type="number" min="1" max="28" value="'+(t.diaCierre||'')+'" onchange="editarTarjeta('+i+',\'diaCierre\',this.value)" placeholder="ej. 15" style="flex:0.6;">' +
+    '<span class="ciclo-label">Paga a los</span><input type="number" min="1" max="45" value="'+(t.diasParaPago||20)+'" onchange="editarTarjeta('+i+',\'diasParaPago\',this.value)" style="flex:0.6;"><span class="ciclo-label">días del cierre</span>' +
+    '</div></div>'
   ).join('');
 }
 function editarTarjeta(i, campo, valor){
   const tarjetas = getTarjetas();
-  tarjetas[i][campo] = campo === 'limite' ? Number(valor) : valor;
+  const camposNumericos = ['limite', 'diaCierre', 'diasParaPago'];
+  tarjetas[i][campo] = camposNumericos.indexOf(campo) !== -1 ? Number(valor) : valor;
   setConfigLocal('Tarjetas', JSON.stringify(tarjetas));
+  if (campo === 'diaCierre' || campo === 'diasParaPago') renderTarjetasResumen();
 }
 function agregarTarjeta(){
   const tarjetas = getTarjetas();
-  tarjetas.push({ id: 'tmp_'+Date.now(), nombre: 'Nueva tarjeta', propietario: MI_PERSONA, limite: 0 });
+  tarjetas.push({ id: 'tmp_'+Date.now(), nombre: 'Nueva tarjeta', propietario: MI_PERSONA, limite: 0, diaCierre: 0, diasParaPago: 20 });
   setConfigLocal('Tarjetas', JSON.stringify(tarjetas));
   renderListaTarjetasConfig();
 }
