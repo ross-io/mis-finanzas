@@ -7,10 +7,11 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTWlzIEZpbmFuemFzIiwic2hvcnRfbmFtZSI6IkZpbmFuemFzIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJzdGFydF91cmwiOiIuIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwZDE0MjAiLCJ0aGVtZV9jb2xvciI6IiMwZDE0MjAifQ==">
 <style>
   :root{
-    --bg:#0d1420; --card:#161f2e; --card2:#1e2a3d;
-    --accent:#2dd4bf; --accent-ink:#062a26; --accent2:#fb923c;
-    --good:#34d399; --warn:#fbbf24; --danger:#f87171;
-    --text:#eef2f7; --text-dim:#8a96a8; --border:#263244; --radius:16px;
+    --bg:#f2f3fa; --card:#ffffff; --card2:#f4f5fb;
+    --accent:#14b8a6; --accent-ink:#ffffff; --accent2:#fb923c;
+    --good:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+    --text:#1e2433; --text-dim:#8b90a3; --border:#eaebf3; --radius:20px;
+    --shadow:0 3px 18px rgba(30,36,60,.06);
   }
   *{box-sizing:border-box;}
   body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh;}
@@ -31,20 +32,20 @@
   .screen{display:none; padding:0 16px 16px;}
   .screen.active{display:block;}
 
-  .card{background:var(--card); border-radius:var(--radius); padding:18px; margin-bottom:14px; border:1px solid var(--border);}
+  .card{background:var(--card); border-radius:var(--radius); padding:18px; margin-bottom:14px; border:1px solid var(--border); box-shadow:var(--shadow);}
   .card-title{font-size:12px; color:var(--text-dim); margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;}
   .card-title.with-action{display:flex; justify-content:space-between; align-items:center;}
 
-  .balance-hero{background:linear-gradient(135deg, #14b8a6, #0d9488); border-radius:20px; padding:22px; margin-bottom:14px; color:#04231f;}
-  .balance-hero .label{font-size:13px; opacity:.8;}
+  .balance-hero{background:linear-gradient(135deg, #2dd4bf, #0d9488); border-radius:24px; padding:22px; margin-bottom:14px; color:#ffffff; box-shadow:0 8px 24px rgba(20,184,166,.28);}
+  .balance-hero .label{font-size:13px; opacity:.85;}
   .balance-hero .amount{font-size:34px; font-weight:800; margin:4px 0 12px;}
-  .balance-hero .sub{display:flex; gap:18px; font-size:13px; opacity:.9; font-weight:600;}
+  .balance-hero .sub{display:flex; gap:18px; font-size:13px; opacity:.95; font-weight:600;}
 
   .bar-row{margin-bottom:14px;}
   .bar-row:last-child{margin-bottom:0;}
   .bar-label{display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;}
   .bar-label span:last-child{color:var(--text-dim);}
-  .bar-track{background:#0a1119; border-radius:8px; height:10px; overflow:hidden;}
+  .bar-track{background:var(--card2); border-radius:8px; height:10px; overflow:hidden;}
   .bar-fill{height:100%; border-radius:8px; transition:width .3s;}
   .bar-fill.good{background:var(--good);}
   .bar-fill.warn{background:var(--warn);}
@@ -77,7 +78,7 @@
 
   .split-row{display:flex; gap:8px; margin-bottom:8px;} .split-row input{flex:1;}
 
-  nav.nav-mobile{position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:10;}
+  nav.nav-mobile{position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:10; box-shadow:0 -4px 18px rgba(30,36,60,.06);}
   nav.nav-mobile .nav-item{flex:1; text-align:center; padding:6px 0; cursor:pointer; color:var(--text-dim); font-size:11px;}
   nav.nav-mobile .nav-item .ic{font-size:20px; display:block; margin-bottom:2px;}
   nav.nav-mobile .nav-item.active{color:var(--accent);}
@@ -113,7 +114,7 @@
 
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; align-items:flex-end; justify-content:center;}
   .modal-bg.active{display:flex;}
-  .modal{background:var(--card); width:100%; max-width:480px; border-radius:20px 20px 0 0; padding:20px; max-height:88vh; overflow-y:auto;}
+  .modal{background:var(--card); width:100%; max-width:480px; border-radius:24px 24px 0 0; padding:20px; max-height:88vh; overflow-y:auto; box-shadow:0 -8px 30px rgba(30,36,60,.12);}
   .modal h3{margin-top:0;}
   .close-x{float:right; cursor:pointer; font-size:18px; color:var(--text-dim);}
 
@@ -159,7 +160,7 @@
 
   body.view-desktop #app{max-width:1180px; margin:0 auto; padding-left:210px; position:relative;}
   body.view-desktop nav.nav-mobile{display:none;}
-  body.view-desktop nav.nav-desktop{display:flex; position:fixed; top:0; left:calc(50% - 590px); width:200px; height:100vh; background:var(--card); border-right:1px solid var(--border); padding-top:20px;}
+  body.view-desktop nav.nav-desktop{display:flex; position:fixed; top:0; left:calc(50% - 590px); width:200px; height:100vh; background:var(--card); border-right:1px solid var(--border); padding-top:20px; box-shadow:4px 0 18px rgba(30,36,60,.04);}
   body.view-desktop header{padding-left:0;}
   body.view-desktop .screen{padding:0 24px 40px;}
   body.view-desktop .screen.active{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-content:start;}
@@ -246,6 +247,11 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">Cuotas activas (tuyas)</div>
+      <div id="cuotasActivasResumen"></div>
+    </div>
+
     <div class="card"><div class="card-title">Te deben</div><div id="resumenDeudas"></div></div>
   </div>
 
@@ -312,10 +318,20 @@
         <div class="chip" data-tipo="Ingreso" onclick="setTipo('Ingreso')">Ingreso</div>
         <div class="chip" data-tipo="Ahorro" onclick="setTipo('Ahorro')">Ahorro</div>
       </div>
-      <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal">
+      <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota()">
       <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
       <div class="field" id="fMetodoWrap"><label>Método</label><div class="chip-row" id="fMetodos"></div></div>
       <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
+      <div class="field" id="cuotasWrap">
+        <label class="check"><input type="checkbox" id="fCuotas" onclick="toggleCuotas()"> Pagar en cuotas</label>
+        <div id="cuotasCampos" style="margin-top:8px; display:none;">
+          <div class="row-2">
+            <div class="field"><label>Número de cuotas</label><input type="number" id="fNumCuotas" value="2" min="2" max="36" oninput="previsualizarCuota()"></div>
+            <div class="field"><label>Empieza el</label><input type="text" id="fFechaCuotas" value="hoy" disabled></div>
+          </div>
+          <div id="previaCuota" style="font-size:13px; color:var(--text-dim); margin-top:-6px;"></div>
+        </div>
+      </div>
       <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" placeholder="ej. Almuerzo con Rappi"></div>
       <div class="field" id="compartirWrap">
         <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir()"> Se comparte con alguien</label>
@@ -662,6 +678,50 @@ function renderInicio(){
 
   renderChartCategorias(delMes);
   renderChartTendencia();
+  renderCuotasActivas();
+}
+
+function cuotasActivasDePersona(persona){
+  const mias = state.movimientos.filter(m => m.Persona === persona && m.CuotaGrupoID);
+  const grupos = {};
+  mias.forEach(m => {
+    if (!grupos[m.CuotaGrupoID]) grupos[m.CuotaGrupoID] = [];
+    grupos[m.CuotaGrupoID].push(m);
+  });
+  const ahora = new Date();
+  return Object.values(grupos).map(lista => {
+    lista.sort((a,b) => new Date(a.Fecha) - new Date(b.Fecha));
+    const restantes = lista.filter(m => new Date(m.Fecha) >= new Date(ahora.getFullYear(), ahora.getMonth(), 1));
+    return {
+      descripcion: lista[0].Descripcion || lista[0].Categoria,
+      metodo: lista[0].Metodo,
+      cuotaMensual: Number(lista[0].Monto),
+      totalCuotas: lista.length,
+      restantes: restantes.length,
+      proximaFecha: restantes.length ? new Date(restantes[0].Fecha) : null,
+      grupoId: lista[0].CuotaGrupoID
+    };
+  }).filter(g => g.restantes > 0);
+}
+function renderCuotasActivas(){
+  const wrap = document.getElementById('cuotasActivasResumen');
+  const activos = cuotasActivasDePersona(MI_PERSONA);
+  if (!activos.length){ wrap.innerHTML = '<div class="empty">No tienes cuotas pendientes 👍</div>'; return; }
+  const totalMensual = activos.reduce((s,g) => s + g.cuotaMensual, 0);
+  wrap.innerHTML = '<div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">Comprometido este mes: <b style="color:var(--text);">S/'+totalMensual.toFixed(2)+'</b></div>' +
+    activos.map(g => {
+      const label = g.totalCuotas - g.restantes + 1;
+      const fechaTxt = g.proximaFecha ? g.proximaFecha.toLocaleDateString('es-PE',{month:'short',year:'2-digit'}) : '';
+      return '<div class="mov-item"><div class="mov-left"><div class="mov-icon">📅</div><div>' +
+        '<div class="mov-desc">'+g.descripcion+'</div>' +
+        '<div class="mov-meta">'+g.metodo+' · cuota '+label+'/'+g.totalCuotas+' · próxima '+fechaTxt+'</div></div></div>' +
+        '<div style="text-align:right;"><div class="mov-amount">S/'+g.cuotaMensual.toFixed(2)+'/mes</div>' +
+        '<button class="mov-del" title="Cancelar cuotas restantes" onclick="cancelarCuotasRestantes(\''+g.grupoId+'\')">✕</button></div></div>';
+    }).join('');
+}
+function cancelarCuotasRestantes(grupoId){
+  if (!confirm('¿Cancelar las cuotas que faltan de esta compra? Las que ya pasaron se quedan como historial.')) return;
+  postData('deleteCuotasFuturas', { grupoId }).then(() => { showToast('Cuotas restantes canceladas'); cargarDatos(); });
 }
 
 function renderTarjetasResumen(){
@@ -761,6 +821,7 @@ function renderFormOpciones(){
     metWrap.appendChild(div);
   });
   document.getElementById('compartirWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
+  document.getElementById('cuotasWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   actualizarAvisoTarjetaAjena(getMetodos(tipoActual)[0]);
 }
 function actualizarAvisoTarjetaAjena(metodo){
@@ -795,6 +856,19 @@ function addPersonaRow(nombrePrefill, montoPrefill){
   row.innerHTML = '<input type="text" placeholder="Nombre" class="persona-nombre" value="'+(nombrePrefill||'')+'"><input type="number" placeholder="Monto" class="persona-monto" value="'+(montoPrefill||'')+'">';
   wrap.appendChild(row);
 }
+function toggleCuotas(){
+  const on = document.getElementById('fCuotas').checked;
+  document.getElementById('cuotasCampos').style.display = on ? 'block' : 'none';
+  if (on) previsualizarCuota();
+}
+function previsualizarCuota(){
+  const monto = parseFloat(document.getElementById('fMonto').value) || 0;
+  const n = Math.max(2, parseInt(document.getElementById('fNumCuotas').value) || 2);
+  const cuota = monto / n;
+  document.getElementById('previaCuota').textContent = monto
+    ? 'S/' + cuota.toFixed(2) + ' x ' + n + ' meses (empezando este mes)'
+    : 'Ingresa el monto total arriba para ver la cuota mensual';
+}
 function guardarMovimiento(){
   const monto = parseFloat(document.getElementById('fMonto').value);
   if (!monto || monto <= 0){ showToast('Ingresa un monto válido'); return; }
@@ -809,13 +883,20 @@ function guardarMovimiento(){
       if (nombre && m > 0) compartido.push({ persona: nombre, monto: m });
     });
   }
-  postData('addMovimiento', { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido }).then(() => {
-    showToast('Registrado ✅');
+  const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
+  const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
+  const payload = esCuotas
+    ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido }
+    : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido };
+  postData(accion, payload).then(() => {
+    showToast(esCuotas ? 'Cuotas registradas ✅' : 'Registrado ✅');
     document.getElementById('fMonto').value = '';
     document.getElementById('fDescripcion').value = '';
     document.getElementById('fCompartir').checked = false;
     document.getElementById('compartirRows').innerHTML = '';
     toggleCompartir();
+    document.getElementById('fCuotas').checked = false;
+    toggleCuotas();
     document.getElementById('asesorResultado').innerHTML = '';
     document.getElementById('asesorTexto').value = '';
     cargarDatos();
@@ -858,6 +939,13 @@ function consultarAsesor(){
 
   const meta = Number(getMetasAhorro()[MI_PERSONA] || 0);
   if (meta > 0 && monto > meta*0.2){ razones.push('Es un monto considerable frente a tu meta de ahorro.'); puntos -= 0.5; }
+
+  const cuotasActivas = cuotasActivasDePersona(MI_PERSONA);
+  const totalCuotasMes = cuotasActivas.reduce((s,g) => s + g.cuotaMensual, 0);
+  if (totalCuotasMes > 0){
+    razones.push('Ya tienes S/' + totalCuotasMes.toFixed(2) + ' comprometidos en cuotas cada mes de compras anteriores.');
+    if (totalCuotasMes > disponible * 0.4) puntos -= 1;
+  }
 
   let verdictClass, verdictText;
   if (puntos >= 1){ verdictClass='go'; verdictText='✅ Adelante, no la ves mal'; }
@@ -1211,20 +1299,21 @@ function confirmarPago(){
 function exportarResumenDeudas(){
   const { teDeben, tuDebes } = relacionesDeuda();
   const filas = [];
-  teDeben.forEach(t => filas.push({ txt: t.persona + ' te debe', monto: t.total, color:'#34d399' }));
-  tuDebes.forEach(t => filas.push({ txt: 'Le debes a ' + t.persona, monto: t.total, color:'#f87171' }));
+  teDeben.forEach(t => filas.push({ txt: t.persona + ' te debe', monto: t.total, color:'#16a34a' }));
+  tuDebes.forEach(t => filas.push({ txt: 'Le debes a ' + t.persona, monto: t.total, color:'#dc2626' }));
   const canvas = document.getElementById('canvasExport');
   const w = 600, h = 120 + filas.length*54 + (filas.length?0:40);
   canvas.width = w; canvas.height = Math.max(h, 220);
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0d1420'; ctx.fillRect(0,0,w,canvas.height);
-  ctx.fillStyle = '#eef2f7'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('🪙 Resumen de deudas — ' + MI_PERSONA, 24, 44);
-  ctx.fillStyle = '#8a96a8'; ctx.font = '14px sans-serif'; ctx.fillText(new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'}), 24, 68);
+  ctx.fillStyle = '#f2f3fa'; ctx.fillRect(0,0,w,canvas.height);
+  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('🪙 Resumen de deudas — ' + MI_PERSONA, 24, 44);
+  ctx.fillStyle = '#8b90a3'; ctx.font = '14px sans-serif'; ctx.fillText(new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'}), 24, 68);
   let y = 100;
-  if (!filas.length){ ctx.fillStyle = '#8a96a8'; ctx.font = '16px sans-serif'; ctx.fillText('Todo al día 🎉', 24, y+20); }
+  if (!filas.length){ ctx.fillStyle = '#8b90a3'; ctx.font = '16px sans-serif'; ctx.fillText('Todo al día 🎉', 24, y+20); }
   filas.forEach(f => {
-    ctx.fillStyle = '#161f2e'; ctx.fillRect(24, y, w-48, 44);
-    ctx.fillStyle = '#eef2f7'; ctx.font = '15px sans-serif'; ctx.fillText(f.txt, 38, y+27);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(24, y, w-48, 44);
+    ctx.strokeStyle = '#eaebf3'; ctx.lineWidth = 1; ctx.strokeRect(24.5, y+0.5, w-49, 43);
+    ctx.fillStyle = '#1e2433'; ctx.font = '15px sans-serif'; ctx.fillText(f.txt, 38, y+27);
     ctx.fillStyle = f.color; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('S/'+f.monto.toFixed(2), w-40, y+27); ctx.textAlign='left';
     y += 54;
   });
@@ -1254,9 +1343,10 @@ function renderHistorial(){
     const signo = m.Tipo === 'Ingreso' ? 'pos' : 'neg';
     const prefijo = m.Tipo === 'Ingreso' ? '+' : '-';
     const personaTxt = m.Persona && m.Persona !== MI_PERSONA ? ' · ' + m.Persona : '';
+    const cuotaTxt = m.Cuotas ? ' · <span class="desc-badge">Cuota ' + m.Cuotas + '</span>' : '';
     return '<div class="mov-item">' +
       '<div class="mov-left"><div class="mov-icon">' + (ICONOS[m.Categoria]||'💸') + '</div><div>' +
-      '<div class="mov-desc">' + (m.Descripcion || m.Categoria) + '</div>' +
+      '<div class="mov-desc">' + (m.Descripcion || m.Categoria) + cuotaTxt + '</div>' +
       '<div class="mov-meta">' + fechaTxt + ' · ' + m.Metodo + personaTxt + '</div></div></div>' +
       '<div style="display:flex; align-items:center;"><div class="mov-amount ' + signo + '">' + prefijo + 'S/' + Number(m.Monto).toFixed(2) + '</div>' +
       '<button class="mov-del" onclick="borrarMovimiento(\'' + m.ID + '\')">✕</button></div></div>';
