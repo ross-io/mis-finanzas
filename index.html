@@ -630,7 +630,7 @@ function renderDeudas(){
       '<div class="mov-meta">' + (d.Descripcion||'') + ' · ' + d.Estado + '</div>' +
       '</div></div>' +
       '<div style="text-align:right;"><div class="mov-amount pos">S/' + saldo.toFixed(2) + '</div>' +
-      '<button class="btn btn-sm btn-secondary" onclick="abrirPago(\\'' + d.ID + '\\', \\'' + d.Persona + '\\', ' + saldo + ')">Registrar pago</button></div>' +
+      '<button class="btn btn-sm btn-secondary" onclick="abrirPago(\'' + d.ID + '\', \'' + d.Persona + '\', ' + saldo + ')">Registrar pago</button></div>' +
       '</div>';
   }).join('');
 }
@@ -672,7 +672,7 @@ function renderHistorial(){
       '<div class="mov-meta">' + fechaTxt + ' · ' + m.Metodo + '</div>' +
       '</div></div>' +
       '<div style="display:flex; align-items:center;"><div class="mov-amount ' + signo + '">' + prefijo + 'S/' + Number(m.Monto).toFixed(2) + '</div>' +
-      '<button class="mov-del" onclick="borrarMovimiento(\\'' + m.ID + '\\')">✕</button></div>' +
+      '<button class="mov-del" onclick="borrarMovimiento(\'' + m.ID + '\')">✕</button></div>' +
       '</div>';
   }).join('');
 }
