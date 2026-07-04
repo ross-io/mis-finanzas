@@ -417,6 +417,15 @@
     <div id="presupuestosConfig"></div>
 
     <button class="btn btn-primary" style="margin-top:10px;" onclick="guardarConfig()">Guardar</button>
+
+    <div class="card-title" style="margin-top:18px;">Avanzado: reparar un nombre suelto</div>
+    <p style="font-size:12px; color:var(--text-dim);">Úsalo solo si algo (una tarjeta, un movimiento viejo) sigue mostrando un nombre que ya no usas — por ejemplo si renombraste "Yo" antes y quedó una referencia vieja. Esto NO crea un miembro nuevo, solo corrige texto suelto en tarjetas, movimientos, deudas y compras.</p>
+    <div class="row-2">
+      <div class="field"><label>Nombre viejo (suelto)</label><input type="text" id="repararViejo" placeholder="ej. Yo"></div>
+      <div class="field"><label>Nombre correcto</label><input type="text" id="repararNuevo" placeholder="ej. Rossio"></div>
+    </div>
+    <button class="btn btn-secondary" onclick="repararNombreSuelto()">Reparar</button>
+
     <p style="font-size:12px; color:var(--text-dim); margin-top:14px;">URL conectada:<br><span id="urlActual" style="word-break:break-all;"></span></p>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="cambiarUrl()">Cambiar URL de conexión</button>
   </div>
@@ -658,7 +667,7 @@ function ocultarCargando(){
 // ---------- DATA ----------
 function cargarDatos(){
   mostrarCargando();
-  fetch(WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN)).then(r=>r.json()).then(data => {
+  return fetch(WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN)).then(r=>r.json()).then(data => {
     if (data.error){ showToast('Error: ' + data.error); return; }
     aplicarDatos(data);
     render();
@@ -1488,6 +1497,32 @@ function guardarEdicionMovimiento(){
   });
 }
 
+// Utilidad de reparación manual: para arreglar referencias que quedaron
+// sueltas de ANTES de que existiera el renombrado en cascada (ej. una
+// tarjeta que sigue diciendo "de Yo" aunque ya renombraste ese miembro).
+function repararNombreSuelto(){
+  const viejo = document.getElementById('repararViejo').value.trim();
+  const nuevo = document.getElementById('repararNuevo').value.trim();
+  if (!viejo || !nuevo){ showToast('Completa ambos nombres'); return; }
+  if (!confirm('Esto va a reemplazar "'+viejo+'" por "'+nuevo+'" en tarjetas, movimientos, deudas y compras. ¿Continuar?')) return;
+  postData('renombrarPersona', { nombreAnterior: viejo, nombreNuevo: nuevo }).then(res => {
+    if (res.error) return;
+    if (viejo === MI_PERSONA){
+      localStorage.setItem('finanzas_persona', nuevo);
+      MI_PERSONA = nuevo;
+      document.getElementById('personaPillNombre').textContent = MI_PERSONA;
+    }
+    showToast('Reparado ✅');
+    document.getElementById('repararViejo').value = '';
+    document.getElementById('repararNuevo').value = '';
+    cargarDatos().then(() => {
+      document.getElementById('miPersonaTexto').textContent = MI_PERSONA;
+      renderListaMiembrosConfig();
+      renderListaTarjetasConfig();
+      renderPresupuestosConfig();
+    });
+  });
+}
 // ---------- CONFIG MODAL ----------
 function abrirModal(id){
   if (id === 'modalConfig'){
@@ -1505,7 +1540,7 @@ function cerrarModal(id){ document.getElementById(id).classList.remove('active')
 function renderListaMiembrosConfig(){
   const miembros = getMiembros();
   document.getElementById('listaMiembrosConfig').innerHTML = miembros.map((m,i) =>
-    '<div class="tarjeta-row"><input type="text" value="'+m.nombre+'" onchange="editarMiembro('+i+',\'nombre\',this.value)" style="flex:1;">' +
+    '<div class="tarjeta-row"><input type="text" value="'+m.nombre+'" onchange="renombrarMiembroUI('+i+',this.value)" style="flex:1;">' +
     '<input type="tel" value="'+(m.telefono||'')+'" placeholder="Celular" onchange="editarMiembro('+i+',\'telefono\',this.value)" style="flex:1;">' +
     '<span class="tr-del" onclick="quitarMiembro('+i+')">✕</span></div>'
   ).join('');
@@ -1514,6 +1549,35 @@ function editarMiembro(i, campo, valor){
   const miembros = getMiembros();
   miembros[i][campo] = valor;
   setConfigLocal('MiembrosFamilia', JSON.stringify(miembros));
+}
+// Cambiar el NOMBRE de alguien no es un campo suelto: ese nombre está usado
+// como identificador en tarjetas, metas, presupuestos y en todo el historial
+// ya guardado. Por eso esto llama al backend a renombrar en cascada, en vez
+// de solo tocar la lista local (que dejaba referencias viejas sueltas).
+function renombrarMiembroUI(i, nuevoNombreRaw){
+  const miembros = getMiembros();
+  const anterior = miembros[i].nombre;
+  const nuevo = nuevoNombreRaw.trim();
+  if (!nuevo || nuevo === anterior){ renderListaMiembrosConfig(); return; }
+  if (!confirm('Esto va a renombrar a "'+anterior+'" como "'+nuevo+'" en tus tarjetas, metas y en TODO el historial ya guardado (de toda la familia). ¿Continuar?')){
+    renderListaMiembrosConfig();
+    return;
+  }
+  postData('renombrarPersona', { nombreAnterior: anterior, nombreNuevo: nuevo }).then(res => {
+    if (res.error){ renderListaMiembrosConfig(); return; }
+    if (anterior === MI_PERSONA){
+      localStorage.setItem('finanzas_persona', nuevo);
+      MI_PERSONA = nuevo;
+      document.getElementById('personaPillNombre').textContent = MI_PERSONA;
+    }
+    showToast('Renombrado en todos lados ✅');
+    cargarDatos().then(() => {
+      document.getElementById('miPersonaTexto').textContent = MI_PERSONA;
+      renderListaMiembrosConfig();
+      renderListaTarjetasConfig();
+      renderPresupuestosConfig();
+    });
+  });
 }
 function agregarMiembro(){
   const nombre = document.getElementById('nuevoMiembroNombre').value.trim();
