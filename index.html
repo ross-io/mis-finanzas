@@ -418,7 +418,7 @@
         <div class="chip" data-tipo="Ingreso" onclick="setTipo('Ingreso')">Ingreso</div>
         <div class="chip" data-tipo="Ahorro" onclick="setTipo('Ahorro')">Ahorro</div>
       </div>
-      <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota()">
+      <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota(); actualizarResumenCompartir('f');">
       <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('inputEscanearRegistro').click()">📷 Escanear boleta (llenar monto)</button>
       <input type="file" id="inputEscanearRegistro" accept="image/*" capture="environment" style="display:none;" onchange="escanearBoletaRegistrarUI(this.files[0])">
       <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
@@ -437,9 +437,11 @@
       <div class="field"><label>Fecha</label><input type="date" id="fFecha"></div>
       <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" placeholder="ej. Almuerzo con Rappi"></div>
       <div class="field" id="compartirWrap">
-        <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir()"> Se comparte con alguien</label>
-        <div id="compartirRows" style="margin-top:8px; display:none;"></div>
-        <button class="btn btn-sm btn-secondary" id="btnAddPersona" style="display:none; margin-top:4px;" onclick="addPersonaRow()">+ Agregar persona</button>
+        <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir('f')"> Se comparte con alguien</label>
+        <div id="fCompartirPicker" style="margin-top:8px; display:none;">
+          <div class="chip-row" id="fCompartirMiembros"></div>
+          <div id="fCompartirResumen" style="font-size:13px; color:var(--text-dim);"></div>
+        </div>
       </div>
       <button class="btn btn-primary" onclick="guardarMovimiento()">Guardar</button>
     </div>
@@ -658,13 +660,15 @@
     <div id="emCuotaAviso" style="display:none; font-size:12px; color:var(--text-dim); margin-bottom:10px;">Esta es una cuota individual — editar aquí solo afecta esta cuota, no las demás del mismo grupo.</div>
     <div class="field"><label>Categoría</label><div class="chip-row" id="emCategorias"></div></div>
     <div class="field" id="emMetodoWrap"><label>Método</label><div class="chip-row" id="emMetodos"></div></div>
-    <div class="field"><label>Monto (S/)</label><input type="number" id="emMonto" step="0.01"></div>
+    <div class="field"><label>Monto (S/)</label><input type="number" id="emMonto" step="0.01" oninput="actualizarResumenCompartir('em')"></div>
     <div class="field"><label>Fecha</label><input type="date" id="emFecha"></div>
     <div class="field"><label>Descripción</label><input type="text" id="emDescripcion"></div>
     <div class="field" id="emCompartirWrap">
-      <label class="check"><input type="checkbox" id="emCompartir" onclick="toggleCompartirEdicion()"> Se comparte con alguien</label>
-      <div id="emCompartirRows" style="margin-top:8px; display:none;"></div>
-      <button class="btn btn-sm btn-secondary" id="emBtnAddPersona" style="display:none; margin-top:4px;" onclick="addPersonaRowEdicion()">+ Agregar persona</button>
+      <label class="check"><input type="checkbox" id="emCompartir" onclick="toggleCompartir('em')"> Se comparte con alguien</label>
+      <div id="emCompartirPicker" style="margin-top:8px; display:none;">
+        <div class="chip-row" id="emCompartirMiembros"></div>
+        <div id="emCompartirResumen" style="font-size:13px; color:var(--text-dim);"></div>
+      </div>
     </div>
     <button class="btn btn-primary" onclick="guardarEdicionMovimiento()">Guardar cambios</button>
   </div>
@@ -1282,7 +1286,7 @@ function renderFormOpciones(){
     const div = document.createElement('div');
     div.className = 'chip' + (i===0?' active':'');
     div.textContent = m;
-    div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); actualizarAvisoTarjetaAjena(m); };
+    div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); actualizarAvisoTarjetaAjena(m); if (document.getElementById('fCompartir').checked) renderCompartirMiembros('f'); };
     metWrap.appendChild(div);
   });
   document.getElementById('compartirWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
@@ -1410,27 +1414,49 @@ function actualizarAvisoTarjetaAjena(metodo){
     aviso.style.display = 'none';
   }
 }
-function toggleCompartir(){
-  const on = document.getElementById('fCompartir').checked;
-  document.getElementById('compartirRows').style.display = on ? 'block' : 'none';
-  document.getElementById('btnAddPersona').style.display = on ? 'inline-block' : 'none';
-  if (on && document.getElementById('compartirRows').children.length === 0){
-    const metodo = document.querySelector('#fMetodos .chip.active')?.textContent || '';
-    const propietario = propietarioDeMetodo(metodo);
-    if (propietario && propietario !== MI_PERSONA){
-      const monto = parseFloat(document.getElementById('fMonto').value) || 0;
-      addPersonaRow(MI_PERSONA, monto ? (monto/2).toFixed(2) : '');
-    } else {
-      addPersonaRow();
-    }
-  }
+function toggleCompartir(prefix){
+  const on = document.getElementById(prefix+'Compartir').checked;
+  document.getElementById(prefix+'CompartirPicker').style.display = on ? 'block' : 'none';
+  if (on) renderCompartirMiembros(prefix);
 }
-function addPersonaRow(nombrePrefill, montoPrefill){
-  const wrap = document.getElementById('compartirRows');
-  const row = document.createElement('div');
-  row.className = 'split-row';
-  row.innerHTML = '<input type="text" placeholder="Nombre" class="persona-nombre" value="'+(nombrePrefill||'')+'"><input type="number" placeholder="Monto" class="persona-monto" value="'+(montoPrefill||'')+'">';
-  wrap.appendChild(row);
+// Pinta los chips de miembros (multi-selección) para dividir el gasto. Si la
+// tarjeta usada es de otra persona, preselecciona TU nombre (la deuda es
+// hacia el dueño de la tarjeta, no hacia ti — por eso tu propio nombre
+// también puede aparecer como alguien que "debe" en este reparto).
+function renderCompartirMiembros(prefix, preseleccionados){
+  const wrap = document.getElementById(prefix+'CompartirMiembros');
+  const metodo = document.querySelector('#'+prefix+'Metodos .chip.active')?.textContent || '';
+  const propietario = propietarioDeMetodo(metodo);
+  const preseleccion = preseleccionados || ((propietario && propietario !== MI_PERSONA) ? [MI_PERSONA] : []);
+  wrap.innerHTML = getNombresMiembros().map(n =>
+    '<div class="chip small'+(preseleccion.includes(n)?' active':'')+'" onclick="toggleChipCompartir(this,\''+prefix+'\')">'+n+'</div>'
+  ).join('');
+  actualizarResumenCompartir(prefix);
+}
+function toggleChipCompartir(el, prefix){
+  el.classList.toggle('active');
+  actualizarResumenCompartir(prefix);
+}
+// Recalcula en vivo: monto total ÷ (seleccionados + tú) = cuánto le toca a
+// cada quien. Se vuelve a llamar cada vez que cambia el monto, el descuento
+// (en Compras eso ya se refleja en el monto), o quién está seleccionado.
+function actualizarResumenCompartir(prefix){
+  const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
+  const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
+  const resumenEl = document.getElementById(prefix+'CompartirResumen');
+  if (!seleccionados.length){ resumenEl.textContent = 'Selecciona con quién se divide (tú siempre entras en la cuenta).'; return; }
+  const divisor = seleccionados.length + 1;
+  const cadaUno = monto / divisor;
+  resumenEl.textContent = 'Se divide entre ' + divisor + ' (tú + ' + seleccionados.length + '): S/' + cadaUno.toFixed(2) + ' cada uno.';
+}
+// Lee la selección actual y arma el array {persona, monto} a mandar al backend.
+function leerCompartidoSeleccionado(prefix){
+  const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
+  const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
+  if (!seleccionados.length) return [];
+  const divisor = seleccionados.length + 1;
+  const cadaUno = Math.round((monto / divisor) * 100) / 100;
+  return seleccionados.map(nombre => ({ persona: nombre, monto: cadaUno }));
 }
 function toggleCuotas(){
   const on = document.getElementById('fCuotas').checked;
@@ -1455,11 +1481,7 @@ function guardarMovimiento(){
   const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
   let compartido = [];
   if (tipoActual === 'Gasto' && document.getElementById('fCompartir').checked){
-    document.querySelectorAll('.split-row').forEach(row => {
-      const nombre = row.querySelector('.persona-nombre').value.trim();
-      const m = parseFloat(row.querySelector('.persona-monto').value);
-      if (nombre && m > 0) compartido.push({ persona: nombre, monto: m });
-    });
+    compartido = leerCompartidoSeleccionado('f');
   }
   const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
   const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
@@ -1473,8 +1495,7 @@ function guardarMovimiento(){
     document.getElementById('fDescripcion').value = '';
     document.getElementById('fFecha').value = new Date().toISOString().slice(0,10);
     document.getElementById('fCompartir').checked = false;
-    document.getElementById('compartirRows').innerHTML = '';
-    toggleCompartir();
+    document.getElementById('fCompartirPicker').style.display = 'none';
     document.getElementById('fCuotas').checked = false;
     toggleCuotas();
     document.getElementById('asesorResultado').innerHTML = '';
@@ -2192,25 +2213,10 @@ function abrirEditarMovimiento(id){
   document.getElementById('emCompartirWrap').style.display = esGasto ? 'block' : 'none';
   const deudasDelMov = esGasto ? state.deudas.filter(d => d.MovimientoID === id) : [];
   document.getElementById('emCompartir').checked = deudasDelMov.length > 0;
-  document.getElementById('emCompartirRows').innerHTML = '';
-  document.getElementById('emCompartirRows').style.display = deudasDelMov.length > 0 ? 'block' : 'none';
-  document.getElementById('emBtnAddPersona').style.display = deudasDelMov.length > 0 ? 'inline-block' : 'none';
-  deudasDelMov.forEach(d => addPersonaRowEdicion(d.Persona, Number(d.MontoDebe).toFixed(2)));
+  document.getElementById('emCompartirPicker').style.display = deudasDelMov.length > 0 ? 'block' : 'none';
+  if (esGasto) renderCompartirMiembros('em', deudasDelMov.map(d => d.Persona));
 
   abrirModal('modalEditarMovimiento');
-}
-function toggleCompartirEdicion(){
-  const on = document.getElementById('emCompartir').checked;
-  document.getElementById('emCompartirRows').style.display = on ? 'block' : 'none';
-  document.getElementById('emBtnAddPersona').style.display = on ? 'inline-block' : 'none';
-  if (on && document.getElementById('emCompartirRows').children.length === 0) addPersonaRowEdicion();
-}
-function addPersonaRowEdicion(nombrePrefill, montoPrefill){
-  const wrap = document.getElementById('emCompartirRows');
-  const row = document.createElement('div');
-  row.className = 'split-row';
-  row.innerHTML = '<input type="text" placeholder="Nombre" class="persona-nombre" value="'+(nombrePrefill||'')+'"><input type="number" placeholder="Monto" class="persona-monto" value="'+(montoPrefill||'')+'">';
-  wrap.appendChild(row);
 }
 function guardarEdicionMovimiento(){
   const m = state.movimientos.find(x => x.ID === movimientoEditandoId);
@@ -2227,11 +2233,7 @@ function guardarEdicionMovimiento(){
 
   let compartido = [];
   if (m.Tipo === 'Gasto' && document.getElementById('emCompartir').checked){
-    document.querySelectorAll('#emCompartirRows .split-row').forEach(row => {
-      const nombre = row.querySelector('.persona-nombre').value.trim();
-      const monto2 = parseFloat(row.querySelector('.persona-monto').value);
-      if (nombre && monto2 > 0) compartido.push({ persona: nombre, monto: monto2 });
-    });
+    compartido = leerCompartidoSeleccionado('em');
   }
 
   postData('updateMovimiento', { id: movimientoEditandoId, categoria, metodo, monto, descripcion, fecha, compartido }).then(res => {
