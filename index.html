@@ -13,8 +13,15 @@
     --text:#1e2433; --text-dim:#8b90a3; --border:#eaebf3; --radius:20px;
     --shadow:0 3px 18px rgba(30,36,60,.06);
   }
+  body.tema-oscuro{
+    --bg:#0d1420; --card:#161f2e; --card2:#1e2a3d;
+    --accent:#2dd4bf; --accent-ink:#062a26; --accent2:#fb923c;
+    --good:#34d399; --warn:#fbbf24; --danger:#f87171;
+    --text:#eef2f7; --text-dim:#8a96a8; --border:#263244;
+    --shadow:0 3px 18px rgba(0,0,0,.35);
+  }
   *{box-sizing:border-box;}
-  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .2s, color .2s;}
 
   #app{min-height:100vh; position:relative;}
   header{padding:18px 20px 10px; display:flex; justify-content:space-between; align-items:center;}
@@ -158,6 +165,18 @@
   .deuda-seccion-title:first-child{margin-top:0;}
 
   .tarjeta-block{background:var(--card2); border-radius:12px; padding:10px 12px; margin-bottom:8px; border:1px solid var(--border);}
+
+  .tarjeta-visual{border-radius:18px; padding:16px 18px; margin-bottom:12px; color:#ffffff; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .tarjeta-visual .tv-top{display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:800; margin-bottom:20px;}
+  .tarjeta-visual .tv-dueno{font-size:11px; font-weight:700; opacity:.9; background:rgba(255,255,255,.22); padding:3px 9px; border-radius:999px;}
+  .tarjeta-visual .tv-numero{letter-spacing:3px; font-size:15px; opacity:.8; margin-bottom:16px;}
+  .tarjeta-visual .tv-bottom{display:flex; justify-content:space-between; font-size:13px; font-weight:800; margin-bottom:8px;}
+  .tarjeta-visual .bar-track{background:rgba(255,255,255,.25);}
+  .tarjeta-visual .tv-ciclo{font-size:11px; opacity:.85; margin-top:8px;}
+
+  .color-swatches{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;}
+  .color-swatch{width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent;}
+  .color-swatch.active{border-color:var(--text);}
   .tarjeta-row{display:flex; gap:8px; align-items:center; margin-bottom:0;}
   .tarjeta-row + .tarjeta-row{margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);}
   .tarjeta-row input, .tarjeta-row select{padding:9px 10px; font-size:13px; background:var(--card);}
@@ -193,18 +212,25 @@
 <div id="setupScreen" class="setup-wrap">
   <div style="width:100%; max-width:400px;">
     <h2>🪙 Configurar tu app de finanzas</h2>
+    <div id="setupMensaje" style="display:none; background:rgba(251,146,60,.12); border:1px solid rgba(251,146,60,.3); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--accent2); margin-bottom:14px;"></div>
     <p style="color:var(--text-dim); font-size:14px;">Pega aquí la URL de tu Web App de Google Apps Script (la misma para toda tu familia).</p>
     <div class="field"><input type="text" id="setupUrl" placeholder="https://script.google.com/macros/s/..." style="background:var(--card2);"></div>
     <p style="color:var(--text-dim); font-size:14px;">Clave secreta (la misma que pusiste en <code>SECRET_TOKEN</code>).</p>
     <div class="field"><input type="password" id="setupToken" placeholder="Tu clave secreta" style="background:var(--card2);"></div>
     <button class="btn btn-primary" onclick="guardarSetup()">Conectar</button>
+    <div class="field" style="margin-top:16px;">
+      <label>¿Un familiar ya te pasó su "conexión"? Pégala aquí en vez de escribir todo</label>
+      <input type="text" id="pegarConexion" placeholder="Pega aquí el texto de conexión">
+    </div>
+    <button class="btn btn-secondary" onclick="pegarConexionYConectar()">Usar conexión pegada</button>
   </div>
 </div>
 
 <div id="identityScreen" class="setup-wrap" style="display:none;">
   <div style="width:100%; max-width:400px;">
     <h2>👋 ¿Quién eres tú?</h2>
-    <p style="color:var(--text-dim); font-size:14px;">Esto se guarda solo en este dispositivo. Cada quien en tu familia elige su nombre al conectarse.</p>
+    <div id="identityMensaje" style="display:none; background:rgba(251,146,60,.12); border:1px solid rgba(251,146,60,.3); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--accent2); margin-bottom:14px;"></div>
+    <p style="color:var(--text-dim); font-size:14px;">Esto se guarda solo en este dispositivo. Cada quien en tu familia elige su nombre al conectarse. El 🔒 significa que ese perfil tiene PIN.</p>
     <div class="chip-row" id="chipsIdentidad"></div>
     <div class="row-2">
       <input type="text" id="nuevaIdentidad" placeholder="Nombre nuevo (si no estás en la lista)">
@@ -230,6 +256,10 @@
         <button data-v="mobile" onclick="setView('mobile')">📱</button>
         <button data-v="desktop" onclick="setView('desktop')">🖥️</button>
       </div>
+      <div class="view-toggle" id="temaToggle">
+        <button data-t="claro" onclick="setTema('claro')">☀️</button>
+        <button data-t="oscuro" onclick="setTema('oscuro')">🌙</button>
+      </div>
       <span class="gear" onclick="abrirModal('modalConfig')">⚙️</span>
     </div>
   </header>
@@ -242,8 +272,18 @@
       <div class="sub"><span id="ingresoMes">↑ Ingresos S/0</span><span id="gastoMes">↓ Gastos S/0</span></div>
     </div>
 
+    <div class="card full-width" id="avisosSuscripcionesWrap" style="display:none;">
+      <div class="card-title">🔔 Por vencer</div>
+      <div id="avisosSuscripciones"></div>
+    </div>
+
     <div class="card"><div class="card-title">Gastos por categoría (este mes, tuyos)</div><div class="chart-wrap" id="chartCategorias"></div></div>
     <div class="card"><div class="card-title">Últimos 6 meses (tuyos)</div><div class="chart-wrap" id="chartTendencia"></div></div>
+
+    <div class="card">
+      <div class="card-title with-action"><span>Suscripciones y servicios (tuyos)</span><button class="btn btn-sm btn-secondary" onclick="abrirNuevaSuscripcion()">+ Agregar</button></div>
+      <div id="listaSuscripciones"></div>
+    </div>
 
     <div class="card">
       <div class="card-title">Tarjetas de la familia</div>
@@ -276,6 +316,18 @@
     <div id="comprasListaWrap" class="full-width">
       <div class="card">
         <div class="card-title with-action">
+          <span>📝 Lista de compras (lo que falta)</span>
+          <button class="btn btn-sm btn-secondary" onclick="limpiarListaCompras()">🧹 Limpiar comprados</button>
+        </div>
+        <div class="row-2">
+          <input type="text" id="nuevoItemLista" placeholder="ej. Papel higiénico" onkeydown="if(event.key==='Enter') agregarItemLista()">
+          <button class="btn btn-sm btn-primary" style="width:auto;" onclick="agregarItemLista()">+ Agregar</button>
+        </div>
+        <div id="listaComprasPendientes" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title with-action">
           <span>Compras de supermercado</span>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-sm btn-secondary" onclick="abrirHistorialPrecios()">📈 Precios</button>
@@ -292,6 +344,8 @@
         <div class="card-title" id="detalleCompraTitulo" style="margin-top:24px;"></div>
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
+        <button class="btn btn-secondary" id="btnEscanearBoleta" onclick="document.getElementById('inputEscanearBoleta').click()" style="margin-bottom:12px;">📷 Escanear boleta y sugerir productos</button>
+        <input type="file" id="inputEscanearBoleta" accept="image/*" capture="environment" style="display:none;" onchange="escanearBoletaUI(this.files[0])">
         <div id="listaProductosCompra"></div>
         <div id="avisoCerrada" style="display:none; font-size:12px; color:var(--text-dim); margin:10px 0;">
           Esta compra ya fue finalizada. Aún puedes reasignar a quién le toca cada producto (el gasto se ajusta solo si cambias precios).
@@ -302,12 +356,21 @@
           <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
           <div class="row-2">
             <div class="field"><label>Cantidad</label><input type="number" id="pCantidad" value="1" min="0" step="0.01"></div>
-            <div class="field"><label>Precio en vitrina (S/)</label><input type="number" id="pVitrina" step="0.01"></div>
+            <div class="field"><label>Precio en vitrina (S/)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
           </div>
-          <div class="row-2">
-            <div class="field"><label>Precio real cobrado en caja (S/)</label><input type="number" id="pReal" step="0.01"></div>
-            <div class="field" style="display:flex; align-items:flex-end;"><label class="check"><input type="checkbox" id="pDescuento"> Tiene descuento</label></div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="pDescuento" onclick="toggleDescuentoCampos('p')"> Tiene descuento</label>
+            <div id="pDescuentoCampos" style="display:none; margin-top:8px;">
+              <div class="row-2">
+                <div class="chip-row" style="margin-bottom:0;">
+                  <div class="chip small active" data-tipo="monto" onclick="elegirTipoDescuento('p','monto')">S/</div>
+                  <div class="chip small" data-tipo="porcentaje" onclick="elegirTipoDescuento('p','porcentaje')">%</div>
+                </div>
+                <input type="number" id="pDescuentoValor" step="0.01" placeholder="Valor del descuento" oninput="recalcularPrecioDescuento('p')">
+              </div>
+            </div>
           </div>
+          <div class="field"><label>Precio real cobrado en caja (S/)</label><input type="number" id="pReal" step="0.01"></div>
           <div class="field"><label>¿Cómo se divide?</label><div id="pDivisionPicker"></div></div>
           <button class="btn btn-primary" onclick="guardarProductoCompra()">Guardar producto</button>
         </div>
@@ -373,7 +436,8 @@
       <div class="chip" data-f="Gasto" onclick="filtrarHistorial('Gasto')">Gastos</div>
       <div class="chip" data-f="Ingreso" onclick="filtrarHistorial('Ingreso')">Ingresos</div>
       <div class="chip" data-f="Ahorro" onclick="filtrarHistorial('Ahorro')">Ahorro</div>
-      <div class="chip" data-f="Familia" onclick="filtrarHistorial('Familia')">👨‍👩‍👧 Toda la familia</div>
+      <div class="chip" data-f="Familia" onclick="filtrarHistorial('Familia')">🤝 Incluye compartidos</div>
+      <div class="chip" onclick="exportarHistorialCSV()">📄 Exportar CSV</div>
     </div>
     <div class="card full-width" id="listaHistorial"></div>
   </div>
@@ -399,9 +463,17 @@
 
     <div class="card-title" style="margin-top:6px;">Tu identidad</div>
     <p style="font-size:13px; color:var(--text-dim);">Estás conectado como <b id="miPersonaTexto"></b>.</p>
-    <button class="btn btn-secondary" style="margin-bottom:16px;" onclick="cambiarIdentidad()">🔁 Cambiar de persona (este dispositivo)</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="cambiarIdentidad()">🔁 Cambiar de persona (este dispositivo)</button>
 
-    <div class="card-title">Familia</div>
+    <div class="card-title">Privacidad: tu PIN</div>
+    <p style="font-size:12px; color:var(--text-dim);">Si le pones un PIN a tu perfil, nadie puede entrar como tú (ni ver tus gastos personales) sin conocerlo. Tus gastos 100% personales ya son invisibles para el resto de la familia por defecto — el PIN es una capa extra para que nadie pueda simplemente elegir tu nombre en este u otro dispositivo.</p>
+    <div class="row-2">
+      <div class="field"><input type="password" id="pinActual" placeholder="PIN actual (si ya tenías uno)"></div>
+      <div class="field"><input type="password" id="pinNuevo" placeholder="PIN nuevo (vacío = quitarlo)"></div>
+    </div>
+    <button class="btn btn-secondary" onclick="cambiarMiPin()">Guardar PIN</button>
+
+    <div class="card-title" style="margin-top:18px;">Familia</div>
     <div id="listaMiembrosConfig"></div>
     <div class="row-3" style="margin-bottom:8px;">
       <input type="text" id="nuevoMiembroNombre" placeholder="Nombre">
@@ -421,6 +493,18 @@
 
     <button class="btn btn-primary" style="margin-top:10px;" onclick="guardarConfig()">Guardar</button>
 
+    <div class="card-title" style="margin-top:18px;">Automatizaciones (funcionan aunque no abras la app)</div>
+    <p style="font-size:12px; color:var(--text-dim);">La primera vez que actives cualquiera de estas, Google te va a pedir autorizar permisos extra (para poder mandar correos o crear los disparadores). Es normal, acéptalo.</p>
+    <div class="row-2">
+      <button class="btn btn-sm btn-secondary" onclick="postData('activarRecordatoriosCierre',{}).then(r=>!r.error&&showToast('Recordatorios activados ✅'))">🔔 Activar recordatorios de cierre</button>
+      <button class="btn btn-sm btn-secondary" onclick="postData('desactivarRecordatoriosCierre',{}).then(r=>!r.error&&showToast('Recordatorios desactivados'))">Desactivar</button>
+    </div>
+    <div class="row-2" style="margin-top:8px;">
+      <button class="btn btn-sm btn-secondary" onclick="postData('activarRespaldoSemanal',{}).then(r=>!r.error&&showToast('Respaldo semanal activado ✅'))">💾 Activar respaldo semanal</button>
+      <button class="btn btn-sm btn-secondary" onclick="postData('desactivarRespaldoSemanal',{}).then(r=>!r.error&&showToast('Respaldo desactivado'))">Desactivar</button>
+    </div>
+    <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="postData('respaldarAhora',{}).then(r=>{ if(!r.error) showToast('Respaldo creado ✅'); })">Respaldar ahora mismo</button>
+
     <div class="card-title" style="margin-top:18px;">Avanzado: reparar un nombre suelto</div>
     <p style="font-size:12px; color:var(--text-dim);">Úsalo solo si algo (una tarjeta, un movimiento viejo) sigue mostrando un nombre que ya no usas — por ejemplo si renombraste "Yo" antes y quedó una referencia vieja. Esto NO crea un miembro nuevo, solo corrige texto suelto en tarjetas, movimientos, deudas y compras.</p>
     <div class="row-2">
@@ -428,6 +512,10 @@
       <div class="field"><label>Nombre correcto</label><input type="text" id="repararNuevo" placeholder="ej. Rossio"></div>
     </div>
     <button class="btn btn-secondary" onclick="repararNombreSuelto()">Reparar</button>
+
+    <div class="card-title" style="margin-top:18px;">Conectar otro dispositivo rápido</div>
+    <p style="font-size:12px; color:var(--text-dim);">Copia este texto y pégalo cuando otro familiar (o tú en otro celular) instale la app — así no tiene que escribir la URL y la clave a mano. Ahí va a ver un campo para "Pegar conexión".</p>
+    <button class="btn btn-sm btn-secondary" onclick="copiarConexion()">📋 Copiar mi conexión</button>
 
     <p style="font-size:12px; color:var(--text-dim); margin-top:14px;">URL conectada:<br><span id="urlActual" style="word-break:break-all;"></span></p>
     <button class="btn btn-secondary" style="margin-top:8px;" onclick="cambiarUrl()">Cambiar URL de conexión</button>
@@ -464,12 +552,21 @@
       <div class="field"><label>Producto</label><input type="text" id="epNombre"></div>
       <div class="row-2">
         <div class="field"><label>Cantidad</label><input type="number" id="epCantidad" step="0.01"></div>
-        <div class="field"><label>Precio vitrina (S/)</label><input type="number" id="epVitrina" step="0.01"></div>
+        <div class="field"><label>Precio vitrina (S/)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
       </div>
-      <div class="row-2">
-        <div class="field"><label>Precio real (S/)</label><input type="number" id="epReal" step="0.01"></div>
-        <div class="field" style="display:flex; align-items:flex-end;"><label class="check"><input type="checkbox" id="epDescuento"> Tiene descuento</label></div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="epDescuento" onclick="toggleDescuentoCampos('ep')"> Tiene descuento</label>
+        <div id="epDescuentoCampos" style="display:none; margin-top:8px;">
+          <div class="row-2">
+            <div class="chip-row" style="margin-bottom:0;">
+              <div class="chip small active" data-tipo="monto" onclick="elegirTipoDescuento('ep','monto')">S/</div>
+              <div class="chip small" data-tipo="porcentaje" onclick="elegirTipoDescuento('ep','porcentaje')">%</div>
+            </div>
+            <input type="number" id="epDescuentoValor" step="0.01" placeholder="Valor del descuento" oninput="recalcularPrecioDescuento('ep')">
+          </div>
+        </div>
       </div>
+      <div class="field"><label>Precio real (S/)</label><input type="number" id="epReal" step="0.01"></div>
     </div>
     <div class="field"><label>¿Cómo se divide? (puedes moverlo cuando quieras)</label><div id="epDivisionPicker"></div></div>
     <button class="btn btn-primary" onclick="guardarEdicionProducto()">Guardar cambios</button>
@@ -487,6 +584,32 @@
     <div class="field"><label>¿Con qué pagaste en caja?</label><div class="chip-row" id="finalizarMetodos"></div></div>
     <div class="field"><label>Foto de la boleta (opcional)</label><input type="file" id="finalizarFoto" accept="image/*" capture="environment"></div>
     <button class="btn btn-primary" onclick="confirmarFinalizarCompra()">Confirmar y crear el gasto</button>
+  </div>
+</div>
+
+<!-- MODAL REVISAR ESCANEO DE BOLETA -->
+<div class="modal-bg" id="modalRevisarEscaneo">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalRevisarEscaneo')">✕</span>
+    <h3>Revisa lo que se detectó</h3>
+    <p style="font-size:12px; color:var(--text-dim);">El escaneo no es perfecto — revisa nombres y precios antes de agregar. Destilda lo que no quieras agregar.</p>
+    <div id="listaCandidatosEscaneo"></div>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="agregarCandidatosEscaneados()">Agregar seleccionados</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVA SUSCRIPCIÓN -->
+<div class="modal-bg" id="modalNuevaSuscripcion">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalNuevaSuscripcion')">✕</span>
+    <h3>Suscripción / servicio recurrente</h3>
+    <div class="field"><label>Nombre</label><input type="text" id="susNombre" placeholder="ej. Spotify, gimnasio, Netflix"></div>
+    <div class="row-2">
+      <div class="field"><label>Monto mensual (S/)</label><input type="number" id="susMonto" step="0.01"></div>
+      <div class="field"><label>Día de pago (1-28)</label><input type="number" id="susDia" min="1" max="28"></div>
+    </div>
+    <div class="field"><label>Método</label><div class="chip-row" id="susMetodos"></div></div>
+    <button class="btn btn-primary" onclick="guardarSuscripcion()">Guardar</button>
   </div>
 </div>
 
@@ -523,7 +646,8 @@
 let WEBAPP_URL = localStorage.getItem('finanzas_url') || '';
 let TOKEN = localStorage.getItem('finanzas_token') || '';
 let MI_PERSONA = localStorage.getItem('finanzas_persona') || '';
-let state = { movimientos: [], deudas: [], config: [], compras: [], productosCompra: [] };
+let MI_PIN = localStorage.getItem('finanzas_pin') || '';
+let state = { movimientos: [], deudas: [], config: [], compras: [], productosCompra: [], usoTarjetas: {}, pinsInfo: {}, listaCompras: [], suscripciones: [] };
 let tipoActual = 'Gasto';
 let filtroHistorial = 'Todos';
 let pagoActual = null; // {deudor, acreedor}
@@ -611,19 +735,74 @@ function aplicarVista(v){
   document.body.classList.toggle('view-mobile', real === 'mobile');
   document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('active', b.dataset.v === v || (v==='auto' && b.dataset.v===real)));
 }
+function setTema(t){ localStorage.setItem('finanzas_tema', t); aplicarTema(t); }
+function aplicarTema(t){
+  document.body.classList.toggle('tema-oscuro', t === 'oscuro');
+  document.querySelectorAll('#temaToggle button').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+}
 
 // ---------- SETUP + IDENTIDAD ----------
+function urlGetAll(persona, pin){
+  let u = WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN);
+  if (persona) u += '&persona=' + encodeURIComponent(persona);
+  if (pin) u += '&pin=' + encodeURIComponent(pin);
+  return u;
+}
 function initApp(){
   if (!WEBAPP_URL){ document.getElementById('setupScreen').style.display = 'flex'; return; }
-  fetch(WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN)).then(r=>r.json()).then(data => {
-    if (data.error){ showToast('Error: ' + data.error); document.getElementById('setupScreen').style.display = 'flex'; return; }
+  fetch(urlGetAll(MI_PERSONA, MI_PIN)).then(r=>r.json()).then(data => {
+    if (data.error){
+      mostrarSetupConDatosPrevios('No pudimos conectar con esa URL/clave (' + data.error + '). Revísalas o reconéctate.');
+      return;
+    }
     aplicarDatos(data);
+    if (data.pinIncorrecto){
+      localStorage.removeItem('finanzas_persona'); localStorage.removeItem('finanzas_pin');
+      MI_PERSONA = ''; MI_PIN = '';
+      mostrarPantallaIdentidad('Tu PIN ya no es válido en este dispositivo — vuelve a ingresarlo.');
+      return;
+    }
+    guardarCache(data);
     if (!MI_PERSONA || !getNombresMiembros().includes(MI_PERSONA)){
       mostrarPantallaIdentidad();
     } else {
       mostrarApp();
     }
-  }).catch(err => showToast('Error de conexión: ' + err.message));
+  }).catch(err => {
+    // Sin internet o el servidor no respondió: en vez de obligar a
+    // reconectar todo, mostramos los últimos datos que sí guardamos.
+    const cache = leerCache();
+    if (cache){
+      aplicarDatos(cache);
+      if (!MI_PERSONA || !getNombresMiembros().includes(MI_PERSONA)){
+        mostrarPantallaIdentidad();
+      } else {
+        mostrarApp();
+        showToast('⚠️ Sin conexión — mostrando tus últimos datos guardados');
+      }
+      return;
+    }
+    mostrarSetupConDatosPrevios('No se pudo conectar (revisa tu internet) — tus datos de conexión seguían guardados, solo reintenta.');
+  });
+}
+function guardarCache(data){
+  try { localStorage.setItem('finanzas_cache', JSON.stringify(data)); } catch (e) { /* sin espacio o storage bloqueado: no pasa nada grave */ }
+}
+function leerCache(){
+  try { return JSON.parse(localStorage.getItem('finanzas_cache') || 'null'); } catch (e) { return null; }
+}
+// Muestra la pantalla de setup pero con la URL/clave que YA teníamos
+// guardadas en este dispositivo precargadas, para no obligar a re-escribir
+// todo desde cero cuando el problema es de red o de una clave vencida.
+function mostrarSetupConDatosPrevios(mensaje){
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('identityScreen').style.display = 'none';
+  document.getElementById('setupUrl').value = WEBAPP_URL || '';
+  document.getElementById('setupToken').value = TOKEN || '';
+  const msgBox = document.getElementById('setupMensaje');
+  if (mensaje){ msgBox.textContent = mensaje; msgBox.style.display = 'block'; }
+  else { msgBox.style.display = 'none'; }
+  document.getElementById('setupScreen').style.display = 'flex';
 }
 function aplicarDatos(data){
   state.movimientos = data.movimientos || [];
@@ -631,6 +810,50 @@ function aplicarDatos(data){
   state.config = data.config || [];
   state.compras = data.compras || [];
   state.productosCompra = data.productosCompra || [];
+  state.usoTarjetas = data.usoTarjetas || {};
+  state.pinsInfo = data.pinsInfo || {};
+  state.listaCompras = data.listaCompras || [];
+  state.suscripciones = data.suscripciones || [];
+}
+// Copia la URL+clave (y no más) como un texto codificado, para que otro
+// familiar no tenga que escribirlas a mano al instalar la app.
+function copiarConexion(){
+  const paquete = btoa(JSON.stringify({ url: WEBAPP_URL, token: TOKEN }));
+  const texto = 'FINANZAS-CONEXION:' + paquete;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(() => showToast('Conexión copiada 📋')).catch(() => promptCopiaManual(texto));
+  } else {
+    promptCopiaManual(texto);
+  }
+}
+function promptCopiaManual(texto){ prompt('Copia este texto:', texto); }
+function pegarConexionYConectar(){
+  const texto = document.getElementById('pegarConexion').value.trim();
+  if (!texto){ showToast('Pega el texto de conexión primero'); return; }
+  try {
+    const sinPrefijo = texto.indexOf('FINANZAS-CONEXION:') === 0 ? texto.substring('FINANZAS-CONEXION:'.length) : texto;
+    const datos = JSON.parse(atob(sinPrefijo));
+    if (!datos.url || !datos.token) throw new Error('formato inválido');
+    localStorage.setItem('finanzas_url', datos.url);
+    localStorage.setItem('finanzas_token', datos.token);
+    WEBAPP_URL = datos.url; TOKEN = datos.token;
+    document.getElementById('setupScreen').style.display = 'none';
+    initApp();
+  } catch(e){
+    showToast('Ese texto de conexión no se pudo leer');
+  }
+}
+function cambiarMiPin(){
+  const pinActual = document.getElementById('pinActual').value.trim();
+  const pinNuevo = document.getElementById('pinNuevo').value.trim();
+  postData('setPin', { persona: MI_PERSONA, pinActual, pinNuevo }).then(res => {
+    if (res.error) return;
+    MI_PIN = pinNuevo;
+    localStorage.setItem('finanzas_pin', pinNuevo);
+    showToast(pinNuevo ? 'PIN guardado ✅' : 'PIN eliminado ✅');
+    document.getElementById('pinActual').value = '';
+    document.getElementById('pinNuevo').value = '';
+  });
 }
 function guardarSetup(){
   const url = document.getElementById('setupUrl').value.trim();
@@ -644,20 +867,41 @@ function guardarSetup(){
   initApp();
 }
 function cambiarUrl(){
-  localStorage.removeItem('finanzas_url'); localStorage.removeItem('finanzas_token'); localStorage.removeItem('finanzas_persona');
+  localStorage.removeItem('finanzas_url'); localStorage.removeItem('finanzas_token');
+  localStorage.removeItem('finanzas_persona'); localStorage.removeItem('finanzas_pin');
   location.reload();
 }
-function mostrarPantallaIdentidad(){
+function mostrarPantallaIdentidad(mensaje){
   document.getElementById('setupScreen').style.display = 'none';
   document.getElementById('app').style.display = 'none';
   document.getElementById('identityScreen').style.display = 'flex';
+  const aviso = document.getElementById('identityMensaje');
+  if (mensaje){ aviso.textContent = mensaje; aviso.style.display = 'block'; } else { aviso.style.display = 'none'; }
   const wrap = document.getElementById('chipsIdentidad');
-  wrap.innerHTML = getNombresMiembros().map(n => '<div class="chip" onclick="elegirIdentidad(\''+n+'\')">'+n+'</div>').join('');
+  wrap.innerHTML = getNombresMiembros().map(n =>
+    '<div class="chip" onclick="elegirIdentidad(\''+n+'\')">'+n+(state.pinsInfo[n] ? ' 🔒' : '')+'</div>'
+  ).join('');
 }
+// Verifica (con el backend) la identidad elegida ANTES de guardarla — así si
+// tiene PIN, se pide y se valida de una vez, sin guardar nada localmente
+// hasta confirmar que es correcto.
 function elegirIdentidad(nombre){
-  localStorage.setItem('finanzas_persona', nombre);
-  MI_PERSONA = nombre;
-  mostrarApp();
+  let pin = '';
+  if (state.pinsInfo[nombre]){
+    pin = prompt('Ingresa el PIN de ' + nombre + ':') || '';
+    if (!pin) return;
+  }
+  mostrarCargando();
+  fetch(urlGetAll(nombre, pin)).then(r=>r.json()).then(data => {
+    if (data.pinIncorrecto){ showToast('PIN incorrecto'); return; }
+    if (data.error){ showToast('Error: ' + data.error); return; }
+    localStorage.setItem('finanzas_persona', nombre);
+    localStorage.setItem('finanzas_pin', pin);
+    MI_PERSONA = nombre; MI_PIN = pin;
+    aplicarDatos(data);
+    guardarCache(data);
+    mostrarApp();
+  }).catch(err => showToast('Error de conexión: ' + err.message)).finally(ocultarCargando);
 }
 function agregarYElegirIdentidad(){
   const nombre = document.getElementById('nuevaIdentidad').value.trim();
@@ -671,7 +915,8 @@ function agregarYElegirIdentidad(){
 }
 function cambiarIdentidad(){
   localStorage.removeItem('finanzas_persona');
-  MI_PERSONA = '';
+  localStorage.removeItem('finanzas_pin');
+  MI_PERSONA = ''; MI_PIN = '';
   cerrarModal('modalConfig');
   document.getElementById('app').style.display = 'none';
   mostrarPantallaIdentidad();
@@ -682,6 +927,7 @@ function mostrarApp(){
   document.getElementById('app').style.display = 'block';
   document.getElementById('personaPillNombre').textContent = MI_PERSONA;
   aplicarVista(localStorage.getItem('finanzas_view') || 'auto');
+  aplicarTema(localStorage.getItem('finanzas_tema') || 'claro');
   render();
 }
 
@@ -699,15 +945,17 @@ function ocultarCargando(){
 // ---------- DATA ----------
 function cargarDatos(){
   mostrarCargando();
-  return fetch(WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN)).then(r=>r.json()).then(data => {
+  return fetch(urlGetAll(MI_PERSONA, MI_PIN)).then(r=>r.json()).then(data => {
     if (data.error){ showToast('Error: ' + data.error); return; }
+    if (data.pinIncorrecto){ showToast('Tu PIN ya no es válido, vuelve a identificarte'); cambiarIdentidad(); return; }
     aplicarDatos(data);
+    guardarCache(data);
     render();
   }).catch(err => showToast('Error de conexión: ' + err.message)).finally(ocultarCargando);
 }
 function cargarDatosYAbrirCompra(compraId){
   mostrarCargando();
-  fetch(WEBAPP_URL + '?action=getAll&token=' + encodeURIComponent(TOKEN)).then(r=>r.json()).then(data => {
+  fetch(urlGetAll(MI_PERSONA, MI_PIN)).then(r=>r.json()).then(data => {
     aplicarDatos(data);
     compraSeleccionadaId = compraId;
     render();
@@ -742,6 +990,8 @@ function misMovimientos(){ return state.movimientos.filter(m => m.Persona === MI
 
 function renderInicio(){
   const now = new Date();
+  renderAvisosSuscripciones();
+  renderSuscripciones();
   const mios = misMovimientos();
   const delMes = mios.filter(m => { const f = new Date(m.Fecha); return f.getMonth()===now.getMonth() && f.getFullYear()===now.getFullYear(); });
   const ingresos = sumaTipo(delMes, 'Ingreso');
@@ -814,23 +1064,112 @@ function cancelarCuotasRestantes(grupoId){
   postData('deleteCuotasFuturas', { grupoId }).then(() => { showToast('Cuotas restantes canceladas'); cargarDatos(); });
 }
 
+// ---------- SUSCRIPCIONES / SERVICIOS RECURRENTES ----------
+function misSuscripcionesActivas(){ return state.suscripciones.filter(s => esTrue(s.Activa)); }
+function diaVencimientoSuscripcion(s){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let vence = new Date(hoy.getFullYear(), hoy.getMonth(), Number(s.DiaPago));
+  const mesActualTxt = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  const yaPagadoEsteMes = s.UltimoPagoMes === mesActualTxt;
+  if (yaPagadoEsteMes || hoy > vence) vence = new Date(hoy.getFullYear(), hoy.getMonth()+1, Number(s.DiaPago));
+  return { vence, yaPagadoEsteMes };
+}
+function renderSuscripciones(){
+  const wrap = document.getElementById('listaSuscripciones');
+  const susActivas = misSuscripcionesActivas();
+  if (!susActivas.length){ wrap.innerHTML = '<div class="empty">No tienes suscripciones registradas</div>'; return; }
+  wrap.innerHTML = susActivas.map(s => {
+    const { vence, yaPagadoEsteMes } = diaVencimientoSuscripcion(s);
+    const fechaTxt = vence.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+    return '<div class="mov-item"><div class="mov-left"><div class="mov-icon">🔁</div><div>' +
+      '<div class="mov-desc">'+s.Nombre+'</div><div class="mov-meta">'+s.Metodo+' · vence '+fechaTxt+(yaPagadoEsteMes?' · pagado este mes ✅':'')+'</div></div></div>' +
+      '<div style="text-align:right;"><div class="mov-amount">S/'+Number(s.Monto).toFixed(2)+'</div>' +
+      '<button class="mov-del" onclick="borrarSuscripcion(\''+s.ID+'\')">✕</button></div></div>';
+  }).join('');
+}
+function renderAvisosSuscripciones(){
+  const wrap = document.getElementById('avisosSuscripciones');
+  const wrapCard = document.getElementById('avisosSuscripcionesWrap');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const porVencer = misSuscripcionesActivas().map(s => ({ s, ...diaVencimientoSuscripcion(s) }))
+    .filter(x => !x.yaPagadoEsteMes && Math.round((x.vence-hoy)/86400000) <= 3);
+  if (!porVencer.length){ wrapCard.style.display = 'none'; return; }
+  wrapCard.style.display = 'block';
+  wrap.innerHTML = porVencer.map(x => {
+    const dias = Math.round((x.vence-hoy)/86400000);
+    const cuando = dias <= 0 ? 'hoy' : ('en ' + dias + ' día(s)');
+    return '<div class="mov-item"><div class="mov-left"><div class="mov-icon">🔔</div><div>' +
+      '<div class="mov-desc">'+x.s.Nombre+'</div><div class="mov-meta">S/'+Number(x.s.Monto).toFixed(2)+' · vence '+cuando+'</div></div></div>' +
+      '<button class="btn btn-sm btn-primary" style="width:auto;" onclick="marcarPagadaSuscripcion(\''+x.s.ID+'\')">OK, ya pagué</button></div>';
+  }).join('');
+}
+function abrirNuevaSuscripcion(){
+  document.getElementById('susNombre').value = '';
+  document.getElementById('susMonto').value = '';
+  document.getElementById('susDia').value = '';
+  const metWrap = document.getElementById('susMetodos'); metWrap.innerHTML = '';
+  getMetodos('Gasto').filter(m => m.indexOf('Pago a ')!==0).forEach((m,i) => {
+    const div = document.createElement('div');
+    div.className = 'chip' + (i===0?' active':'');
+    div.textContent = m;
+    div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); };
+    metWrap.appendChild(div);
+  });
+  abrirModal('modalNuevaSuscripcion');
+}
+function guardarSuscripcion(){
+  const nombre = document.getElementById('susNombre').value.trim();
+  const monto = parseFloat(document.getElementById('susMonto').value);
+  const dia = parseInt(document.getElementById('susDia').value);
+  const metodo = document.querySelector('#susMetodos .chip.active')?.textContent || 'Efectivo';
+  if (!nombre){ showToast('Escribe el nombre'); return; }
+  if (!monto || monto <= 0){ showToast('Monto inválido'); return; }
+  if (!dia || dia < 1 || dia > 28){ showToast('El día debe ser entre 1 y 28'); return; }
+  postData('addSuscripcion', { nombre, monto, diaPago: dia, metodo, categoria: 'Subs', persona: MI_PERSONA }).then(() => {
+    showToast('Suscripción guardada ✅');
+    cerrarModal('modalNuevaSuscripcion');
+    cargarDatos();
+  });
+}
+function marcarPagadaSuscripcion(id){
+  postData('marcarSuscripcionPagada', { id, persona: MI_PERSONA }).then(() => {
+    showToast('Registrado como pagado ✅');
+    cargarDatos();
+  });
+}
+function borrarSuscripcion(id){
+  if (!confirm('¿Borrar esta suscripción?')) return;
+  postData('deleteSuscripcion', { id }).then(() => cargarDatos());
+}
+
+const PALETA_TARJETAS = ['#ec4899','#14b8a6','#f59e0b','#6366f1','#ef4444','#22c55e','#a855f7','#0ea5e9','#64748b','#1e2433'];
+function oscurecerColor(hex, factor){
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, Math.floor(((n>>16)&255) * (1-factor)));
+  const g = Math.max(0, Math.floor(((n>>8)&255) * (1-factor)));
+  const b = Math.max(0, Math.floor((n&255) * (1-factor)));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
 function renderTarjetasResumen(){
   const wrap = document.getElementById('tarjetasResumen');
   const tarjetas = getTarjetas();
   if (!tarjetas.length){ wrap.innerHTML = '<div class="empty">Agrega tus tarjetas en ⚙️ Configuración</div>'; return; }
   wrap.innerHTML = tarjetas.map(t => {
-    const gastado = state.movimientos.filter(m => m.Tipo==='Gasto' && m.Metodo===t.nombre).reduce((s,m)=>s+Number(m.Monto),0);
-    const pagado = state.movimientos.filter(m => m.Tipo==='Gasto' && m.Metodo===('Pago a '+t.nombre)).reduce((s,m)=>s+Number(m.Monto),0);
-    const usado = Math.max(0, gastado-pagado);
+    const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
+    const usado = Number(uso.usado || 0);
     const limite = Number(t.limite||0);
     const pct = limite > 0 ? Math.min(100,(usado/limite)*100) : 0;
-    const clase = pct>=90?'danger':pct>=70?'warn':'good';
+    const color = t.color || PALETA_TARJETAS[0];
     const ciclo = calcularCicloTarjeta(t);
     const cicloTxt = ciclo
-      ? '<div class="mov-meta" style="margin-top:2px;">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
+      ? '<div class="tv-ciclo">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
       : '';
-    return '<div class="bar-row"><div class="bar-label"><span>'+t.nombre+' · de '+t.propietario+'</span><span>S/'+usado.toFixed(2)+' / S/'+limite.toFixed(2)+'</span></div>' +
-      '<div class="bar-track"><div class="bar-fill '+clase+'" style="width:'+pct+'%"></div></div>' + cicloTxt + '</div>';
+    return '<div class="tarjeta-visual" style="background:linear-gradient(135deg, '+color+', '+oscurecerColor(color,0.35)+')">' +
+      '<div class="tv-top"><span>'+t.nombre+'</span><span class="tv-dueno">de '+t.propietario+'</span></div>' +
+      '<div class="tv-numero">•••• •••• •••• ••••</div>' +
+      '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:#ffffff;"></div></div>' +
+      cicloTxt + '</div>';
   }).join('');
 }
 function renderPresupuestosResumen(delMes){
@@ -1020,9 +1359,8 @@ function consultarAsesor(){
   // incluye lo que se cargó ahí sin importar quién lo registró.
   getTarjetas().forEach(t => {
     if (texto.toLowerCase().includes(t.nombre.toLowerCase()) || texto.toLowerCase().includes('tarjeta')){
-      const gastado = state.movimientos.filter(m => m.Tipo==='Gasto' && m.Metodo===t.nombre).reduce((s,m)=>s+Number(m.Monto),0);
-      const pagado = state.movimientos.filter(m => m.Tipo==='Gasto' && m.Metodo===('Pago a '+t.nombre)).reduce((s,m)=>s+Number(m.Monto),0);
-      const usado = Math.max(0, gastado-pagado);
+      const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
+      const usado = Number(uso.usado || 0);
       const limite = Number(t.limite||0);
       const dueñoTxt = t.propietario !== MI_PERSONA ? ' (de '+t.propietario+')' : '';
       if (limite > 0 && (usado+monto) > limite){ razones.push('Con esta compra superarías el límite de '+t.nombre+dueñoTxt+'.'); puntos -= 2; }
@@ -1068,10 +1406,42 @@ function prellenarDesdeAsesor(monto){
 }
 
 // ---------- COMPRAS ----------
+// ---------- LISTA DE COMPRAS (checklist compartido) ----------
+function renderListaComprasPendientes(){
+  const wrap = document.getElementById('listaComprasPendientes');
+  const pendientes = state.listaCompras.filter(i => !esTrue(i.Comprado)).sort((a,b) => new Date(a.Fecha) - new Date(b.Fecha));
+  if (!pendientes.length){ wrap.innerHTML = '<div class="empty">Nada pendiente por ahora 🎉</div>'; return; }
+  wrap.innerHTML = pendientes.map(i =>
+    '<div class="mov-item"><label class="check" style="flex:1;"><input type="checkbox" onclick="toggleItemListaUI(\''+i.ID+'\', true)"> ' +
+    '<span>'+i.Producto+(i.CantidadSugerida?' <span class="mov-meta">('+i.CantidadSugerida+')</span>':'')+'</span></label>' +
+    '<button class="mov-del" onclick="borrarItemLista(\''+i.ID+'\')">✕</button></div>'
+  ).join('');
+}
+function agregarItemLista(){
+  const input = document.getElementById('nuevoItemLista');
+  const producto = input.value.trim();
+  if (!producto) return;
+  postData('addItemLista', { producto, persona: MI_PERSONA }).then(() => {
+    input.value = '';
+    cargarDatos();
+  });
+}
+function toggleItemListaUI(id, comprado){
+  postData('toggleItemLista', { id, comprado }).then(() => { showToast('¡Listo! ✅'); cargarDatos(); });
+}
+function borrarItemLista(id){
+  postData('deleteItemLista', { id }).then(() => cargarDatos());
+}
+function limpiarListaCompras(){
+  if (!confirm('¿Borrar todo lo que ya está marcado como comprado?')) return;
+  postData('limpiarCompradosLista', {}).then(() => { showToast('Lista limpiada'); cargarDatos(); });
+}
+
 function renderCompras(){
   if (compraSeleccionadaId){ renderDetalleCompra(); return; }
   document.getElementById('comprasListaWrap').style.display = 'block';
   document.getElementById('compraDetalleWrap').style.display = 'none';
+  renderListaComprasPendientes();
   const wrap = document.getElementById('listaCompras');
   const lista = [...state.compras].reverse();
   if (!lista.length){ wrap.innerHTML = '<div class="empty">Aún no registras compras del súper. Crea la primera 🛒</div>'; return; }
@@ -1118,6 +1488,7 @@ function renderDetalleCompra(){
   const cerrada = compra.Estado === 'Cerrada';
   document.getElementById('avisoCerrada').style.display = cerrada ? 'block' : 'none';
   document.getElementById('btnAbrirFormProducto').style.display = cerrada ? 'none' : 'block';
+  document.getElementById('btnEscanearBoleta').style.display = cerrada ? 'none' : 'block';
   document.getElementById('btnFinalizarCompra').style.display = cerrada ? 'none' : 'block';
 
   const wrap = document.getElementById('listaProductosCompra');
@@ -1130,8 +1501,11 @@ function renderDetalleCompra(){
     else if (p.TipoDivision === 'Personal') divisionTxt = '🙋 Solo de ' + miembros[0];
     else divisionTxt = '🤝 Entre ' + miembros.join(' y ');
     const precioDiff = esTrue(p.TieneDescuento) ? '<span class="tachado">S/'+Number(p.PrecioVitrina).toFixed(2)+'</span>' : '';
+    const descuentoTxt = esTrue(p.TieneDescuento)
+      ? (p.DescuentoTipo === 'porcentaje' ? '-' + Number(p.DescuentoValor) + '%' : (Number(p.DescuentoValor) > 0 ? '-S/' + Number(p.DescuentoValor).toFixed(2) : 'Descuento'))
+      : '';
     return '<div class="producto-item">' +
-      '<div class="p-top"><div><div class="p-nombre">'+p.Producto+(esTrue(p.TieneDescuento)?'<span class="desc-badge">Descuento</span>':'')+'</div>' +
+      '<div class="p-top"><div><div class="p-nombre">'+p.Producto+(descuentoTxt?'<span class="desc-badge">'+descuentoTxt+'</span>':'')+'</div>' +
       '<div class="p-precio">'+Number(p.Cantidad)+' x '+precioDiff+' S/'+Number(p.PrecioReal).toFixed(2)+'</div></div>' +
       '<div class="p-monto">S/'+Number(p.MontoTotal).toFixed(2)+'</div></div>' +
       '<div class="division-tag'+(sinAsignar?' sin-asignar':'')+'">'+divisionTxt+'</div>' +
@@ -1149,9 +1523,87 @@ function toggleFormProducto(){
     document.getElementById('pVitrina').value = '';
     document.getElementById('pReal').value = '';
     document.getElementById('pDescuento').checked = false;
+    document.getElementById('pDescuentoValor').value = '';
+    document.getElementById('pDescuentoCampos').style.display = 'none';
+    document.querySelectorAll('#pDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo==='monto'));
     renderDivisionPicker('pDivisionPicker', '', []);
   }
 }
+// ---- Descuento en S/ o % (compartido entre el form de agregar "p" y el modal de editar "ep") ----
+function toggleDescuentoCampos(prefix){
+  const on = document.getElementById(prefix+'Descuento').checked;
+  document.getElementById(prefix+'DescuentoCampos').style.display = on ? 'block' : 'none';
+  if (on) recalcularPrecioDescuento(prefix);
+}
+function elegirTipoDescuento(prefix, tipo){
+  const cont = document.getElementById(prefix+'DescuentoCampos');
+  cont.querySelectorAll('.chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo===tipo));
+  recalcularPrecioDescuento(prefix);
+}
+function tipoDescuentoActivo(prefix){
+  const activo = document.querySelector('#'+prefix+'DescuentoCampos .chip[data-tipo].active');
+  return activo ? activo.dataset.tipo : 'monto';
+}
+// Calcula el precio real automáticamente a partir del precio de vitrina y el
+// descuento (en soles o %) — sigue siendo editable después, por si la caja
+// cobró algo ligeramente distinto.
+function recalcularPrecioDescuento(prefix){
+  if (!document.getElementById(prefix+'Descuento').checked) return;
+  const vitrina = parseFloat(document.getElementById(prefix+'Vitrina').value) || 0;
+  const valor = parseFloat(document.getElementById(prefix+'DescuentoValor').value) || 0;
+  if (!vitrina) return;
+  const tipo = tipoDescuentoActivo(prefix);
+  const real = tipo === 'porcentaje' ? vitrina * (1 - valor/100) : Math.max(0, vitrina - valor);
+  document.getElementById(prefix+'Real').value = real.toFixed(2);
+}
+// ---------- ESCANEAR BOLETA (OCR) ----------
+let candidatosEscaneoActual = [];
+function escanearBoletaUI(archivo){
+  if (!archivo) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    showToast('Leyendo la boleta… puede tardar unos segundos');
+    postData('escanearBoleta', { base64, mime: archivo.type }).then(res => {
+      if (res.error) return;
+      candidatosEscaneoActual = res.candidatos || [];
+      if (!candidatosEscaneoActual.length){ showToast('No se detectaron productos — puedes agregarlos a mano'); return; }
+      renderCandidatosEscaneo();
+      abrirModal('modalRevisarEscaneo');
+    });
+  };
+  reader.readAsDataURL(archivo);
+}
+function renderCandidatosEscaneo(){
+  document.getElementById('listaCandidatosEscaneo').innerHTML = candidatosEscaneoActual.map((c,i) =>
+    '<div class="split-row"><label class="check" style="flex:0;"><input type="checkbox" id="cand'+i+'chk" checked></label>' +
+    '<input type="text" id="cand'+i+'nombre" value="'+c.producto.replace(/"/g,'&quot;')+'" style="flex:2;">' +
+    '<input type="number" id="cand'+i+'precio" value="'+c.precio.toFixed(2)+'" step="0.01" style="flex:1;"></div>'
+  ).join('');
+}
+function agregarCandidatosEscaneados(){
+  const seleccionados = candidatosEscaneoActual.map((c,i) => ({
+    marcado: document.getElementById('cand'+i+'chk').checked,
+    producto: document.getElementById('cand'+i+'nombre').value.trim(),
+    precio: parseFloat(document.getElementById('cand'+i+'precio').value) || 0
+  })).filter(c => c.marcado && c.producto && c.precio > 0);
+  if (!seleccionados.length){ showToast('No marcaste ningún producto'); return; }
+  let pendientes = seleccionados.length;
+  seleccionados.forEach(c => {
+    postData('addProductoCompra', {
+      compraId: compraSeleccionadaId, producto: c.producto, cantidad: 1, precioVitrina: c.precio, precioReal: c.precio,
+      tieneDescuento: false, tipoDivision: '', miembros: []
+    }).then(() => {
+      pendientes--;
+      if (pendientes === 0){
+        showToast(seleccionados.length + ' producto(s) agregados ✅');
+        cerrarModal('modalRevisarEscaneo');
+        cargarDatosYAbrirCompra(compraSeleccionadaId);
+      }
+    });
+  });
+}
+
 function guardarProductoCompra(){
   const nombre = document.getElementById('pNombre').value.trim();
   const cantidad = parseFloat(document.getElementById('pCantidad').value);
@@ -1164,7 +1616,8 @@ function guardarProductoCompra(){
   const division = leerDivisionPicker('pDivisionPicker');
   postData('addProductoCompra', {
     compraId: compraSeleccionadaId, producto: nombre, cantidad, precioVitrina: vitrina, precioReal: real,
-    tieneDescuento: descuento, tipoDivision: division.tipo, miembros: division.miembros
+    tieneDescuento: descuento, tipoDivision: division.tipo, miembros: division.miembros,
+    descuentoTipo: descuento ? tipoDescuentoActivo('p') : '', descuentoValor: descuento ? (parseFloat(document.getElementById('pDescuentoValor').value)||0) : 0
   }).then(() => {
     showToast('Producto agregado ✅');
     document.getElementById('formProductoWrap').style.display = 'none';
@@ -1227,6 +1680,9 @@ function abrirEditarProducto(id){
   document.getElementById('epVitrina').value = p.PrecioVitrina;
   document.getElementById('epReal').value = p.PrecioReal;
   document.getElementById('epDescuento').checked = esTrue(p.TieneDescuento);
+  document.getElementById('epDescuentoValor').value = p.DescuentoValor || '';
+  document.querySelectorAll('#epDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo === (p.DescuentoTipo || 'monto')));
+  document.getElementById('epDescuentoCampos').style.display = esTrue(p.TieneDescuento) ? 'block' : 'none';
   document.getElementById('avisoWhatsappMover').innerHTML = '';
   let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
   renderDivisionPicker('epDivisionPicker', p.TipoDivision, miembros);
@@ -1247,6 +1703,8 @@ function guardarEdicionProducto(){
     data.precioVitrina = parseFloat(document.getElementById('epVitrina').value) || 0;
     data.precioReal = parseFloat(document.getElementById('epReal').value);
     data.tieneDescuento = document.getElementById('epDescuento').checked;
+    data.descuentoTipo = data.tieneDescuento ? tipoDescuentoActivo('ep') : '';
+    data.descuentoValor = data.tieneDescuento ? (parseFloat(document.getElementById('epDescuentoValor').value)||0) : 0;
   }
   postData('updateProductoCompra', data).then(() => {
     showToast('Producto actualizado ✅');
@@ -1340,48 +1798,43 @@ function buscarHistorialPrecio(){
 // ---------- DEUDAS (Deudor ⇄ Acreedor) ----------
 function relacionesDeuda(){
   const pendientes = state.deudas.filter(d => d.Estado !== 'Pagado');
-  const teDebenMap = {}, tuDebesMap = {}, otrasMap = {};
+  const teDebenMap = {}, tuDebesMap = {};
   pendientes.forEach(d => {
     const saldo = Number(d.MontoDebe) - Number(d.MontoPagado);
     if (saldo <= 0) return;
     if (d.Acreedor === MI_PERSONA && d.Persona !== MI_PERSONA){
-      if (!teDebenMap[d.Persona]) teDebenMap[d.Persona] = { persona:d.Persona, total:0, items:[] };
+      if (!teDebenMap[d.Persona]) teDebenMap[d.Persona] = { persona:d.Persona, total:0, items:[], masAntigua:d.Fecha };
       teDebenMap[d.Persona].total += saldo; teDebenMap[d.Persona].items.push({desc:d.Descripcion, saldo});
+      if (new Date(d.Fecha) < new Date(teDebenMap[d.Persona].masAntigua)) teDebenMap[d.Persona].masAntigua = d.Fecha;
     } else if (d.Persona === MI_PERSONA && d.Acreedor !== MI_PERSONA){
-      if (!tuDebesMap[d.Acreedor]) tuDebesMap[d.Acreedor] = { persona:d.Acreedor, total:0, items:[] };
+      if (!tuDebesMap[d.Acreedor]) tuDebesMap[d.Acreedor] = { persona:d.Acreedor, total:0, items:[], masAntigua:d.Fecha };
       tuDebesMap[d.Acreedor].total += saldo; tuDebesMap[d.Acreedor].items.push({desc:d.Descripcion, saldo});
-    } else if (d.Persona !== MI_PERSONA && d.Acreedor !== MI_PERSONA){
-      const key = d.Persona + ' → ' + d.Acreedor;
-      if (!otrasMap[key]) otrasMap[key] = { deudor:d.Persona, acreedor:d.Acreedor, total:0 };
-      otrasMap[key].total += saldo;
+      if (new Date(d.Fecha) < new Date(tuDebesMap[d.Acreedor].masAntigua)) tuDebesMap[d.Acreedor].masAntigua = d.Fecha;
     }
   });
   const orden = (a,b) => b.total - a.total;
   return {
     teDeben: Object.values(teDebenMap).sort(orden),
-    tuDebes: Object.values(tuDebesMap).sort(orden),
-    otras: Object.values(otrasMap).sort(orden)
+    tuDebes: Object.values(tuDebesMap).sort(orden)
   };
 }
 function renderDeudas(){
-  const { teDeben, tuDebes, otras } = relacionesDeuda();
+  const { teDeben, tuDebes } = relacionesDeuda();
   const wrap = document.getElementById('listaDeudas');
   let html = '';
   html += '<div class="deuda-seccion-title">Te deben a ti</div>';
   html += teDeben.length ? teDeben.map(t => filaPersonaDeuda(t, t.persona, MI_PERSONA, true)).join('') : '<div class="empty">Nadie te debe nada por ahora 🎉</div>';
   html += '<div class="deuda-seccion-title">Tú debes</div>';
   html += tuDebes.length ? tuDebes.map(t => filaPersonaDeuda(t, MI_PERSONA, t.persona, false)).join('') : '<div class="empty">No le debes nada a nadie 👍</div>';
-  if (otras.length){
-    html += '<div class="deuda-seccion-title">Otras deudas en la familia</div>';
-    html += otras.map(o => '<div class="persona-total-card"><div class="mov-desc">'+o.deudor+' → '+o.acreedor+'</div><div class="mov-amount">S/'+o.total.toFixed(2)+'</div></div>').join('');
-  }
   wrap.innerHTML = html;
 }
 function filaPersonaDeuda(t, deudor, acreedor, mostrarPagar){
   const detalle = t.items.slice(0,3).map(it => (it.desc||'—') + ' (S/'+it.saldo.toFixed(2)+')').join(' · ') + (t.items.length>3 ? ' · +'+(t.items.length-3)+' más' : '');
+  const diasAntiguedad = Math.floor((new Date() - new Date(t.masAntigua)) / 86400000);
+  const badgeAntiguo = diasAntiguedad >= 14 ? '<span class="desc-badge" style="background:rgba(248,113,113,.18); color:var(--danger);">⏰ hace '+diasAntiguedad+' días</span>' : '';
   return '<div class="persona-total-card">' +
     '<div style="display:flex; gap:10px; align-items:center;"><div class="persona-avatar" style="background:'+colorPersona(t.persona)+'">'+t.persona.charAt(0).toUpperCase()+'</div>' +
-    '<div><div class="mov-desc">'+t.persona+'</div><div class="mov-meta">'+detalle+'</div></div></div>' +
+    '<div><div class="mov-desc">'+t.persona+' '+badgeAntiguo+'</div><div class="mov-meta">'+detalle+'</div></div></div>' +
     '<div style="text-align:right;"><div class="mov-amount pos">S/'+t.total.toFixed(2)+'</div>' +
     (mostrarPagar ? '<button class="btn btn-sm btn-secondary" onclick="abrirPago(\''+deudor+'\',\''+acreedor+'\','+t.total+')">Registrar pago</button>' : '<button class="btn btn-sm btn-secondary" onclick="abrirPago(\''+deudor+'\',\''+acreedor+'\','+t.total+')">Pagar</button>') +
     '</div></div>';
@@ -1457,6 +1910,24 @@ function renderHistorial(){
       '<button class="mov-del" title="Editar" onclick="abrirEditarMovimiento(\'' + m.ID + '\')">✏️</button>' +
       '<button class="mov-del" title="Borrar" onclick="borrarMovimiento(\'' + m.ID + '\')">✕</button></div></div>';
   }).join('');
+}
+// Exporta lo que se está viendo en Historial a un .csv (se abre directo en
+// Excel/Sheets) — sin librerías externas, generado a mano.
+function exportarHistorialCSV(){
+  let lista = filtroHistorial === 'Familia' ? [...state.movimientos] : [...misMovimientos()];
+  if (filtroHistorial !== 'Todos' && filtroHistorial !== 'Familia') lista = lista.filter(m => m.Tipo === filtroHistorial);
+  if (!lista.length){ showToast('No hay movimientos para exportar'); return; }
+  const encabezados = ['Fecha','Tipo','Categoria','Descripcion','Metodo','Monto','Persona','Cuotas'];
+  const filas = lista.map(m => [
+    new Date(m.Fecha).toLocaleDateString('es-PE'), m.Tipo, m.Categoria, (m.Descripcion||'').replace(/"/g,'""'),
+    m.Metodo, Number(m.Monto).toFixed(2), m.Persona||'', m.Cuotas||''
+  ]);
+  const csv = [encabezados].concat(filas).map(fila => fila.map(v => '"'+String(v)+'"').join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'historial_' + MI_PERSONA + '_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+  URL.revokeObjectURL(url);
 }
 function borrarMovimiento(id){
   if (!confirm('¿Borrar este movimiento?')) return;
@@ -1559,7 +2030,7 @@ function repararNombreSuelto(){
       MI_PERSONA = nuevo;
       document.getElementById('personaPillNombre').textContent = MI_PERSONA;
     }
-    showToast('Reparado ✅');
+    showToast('Reparado ✅ (' + (res.cambios||0) + ' referencia(s) corregidas)');
     document.getElementById('repararViejo').value = '';
     document.getElementById('repararNuevo').value = '';
     cargarDatos().then(() => {
@@ -1617,7 +2088,7 @@ function renombrarMiembroUI(i, nuevoNombreRaw){
       MI_PERSONA = nuevo;
       document.getElementById('personaPillNombre').textContent = MI_PERSONA;
     }
-    showToast('Renombrado en todos lados ✅');
+    showToast('Renombrado en todos lados ✅ (' + (res.cambios||0) + ' referencia(s))');
     cargarDatos().then(() => {
       document.getElementById('miPersonaTexto').textContent = MI_PERSONA;
       renderListaMiembrosConfig();
@@ -1657,7 +2128,11 @@ function renderListaTarjetasConfig(){
     '<div class="tarjeta-row">' +
     '<span class="ciclo-label">Cierra el día</span><input type="number" min="1" max="28" value="'+(t.diaCierre||'')+'" onchange="editarTarjeta('+i+',\'diaCierre\',this.value)" placeholder="ej. 15" style="flex:0.6;">' +
     '<span class="ciclo-label">Paga a los</span><input type="number" min="1" max="45" value="'+(t.diasParaPago||20)+'" onchange="editarTarjeta('+i+',\'diasParaPago\',this.value)" style="flex:0.6;"><span class="ciclo-label">días del cierre</span>' +
-    '</div></div>'
+    '</div>' +
+    '<div class="color-swatches">' + PALETA_TARJETAS.map(c =>
+      '<div class="color-swatch'+((t.color||PALETA_TARJETAS[0])===c?' active':'')+'" style="background:'+c+'" onclick="editarTarjeta('+i+',\'color\',\''+c+'\')"></div>'
+    ).join('') + '</div>' +
+    '</div>'
   ).join('');
 }
 function editarTarjeta(i, campo, valor){
@@ -1666,10 +2141,11 @@ function editarTarjeta(i, campo, valor){
   tarjetas[i][campo] = camposNumericos.indexOf(campo) !== -1 ? Number(valor) : valor;
   setConfigLocal('Tarjetas', JSON.stringify(tarjetas));
   if (campo === 'diaCierre' || campo === 'diasParaPago') renderTarjetasResumen();
+  if (campo === 'color'){ renderListaTarjetasConfig(); renderTarjetasResumen(); }
 }
 function agregarTarjeta(){
   const tarjetas = getTarjetas();
-  tarjetas.push({ id: 'tmp_'+Date.now(), nombre: 'Nueva tarjeta', propietario: MI_PERSONA, limite: 0, diaCierre: 0, diasParaPago: 20 });
+  tarjetas.push({ id: 'tmp_'+Date.now(), nombre: 'Nueva tarjeta', propietario: MI_PERSONA, limite: 0, diaCierre: 0, diasParaPago: 20, color: PALETA_TARJETAS[tarjetas.length % PALETA_TARJETAS.length] });
   setConfigLocal('Tarjetas', JSON.stringify(tarjetas));
   renderListaTarjetasConfig();
 }
