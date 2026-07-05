@@ -392,6 +392,23 @@
     </div>
 
     <div class="card">
+      <div class="card-title">🔮 Simulador de compra</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Mira el antes/después en tu balance, tu tarjeta y tu presupuesto ANTES de registrar nada de verdad.</p>
+      <input type="number" class="monto-input" id="simMonto" placeholder="S/ 0.00" inputmode="decimal">
+      <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="simCategorias"></div></div>
+      <div class="field"><label>Método</label><div class="chip-row" id="simMetodos"></div></div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="simCuotas" onclick="toggleSimCuotas()"> Pagar en cuotas</label>
+        <div id="simCuotasCampos" style="display:none; margin-top:8px;">
+          <label>Número de cuotas</label>
+          <input type="number" id="simNumCuotas" value="2" min="2" max="36">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="simularCompra()">Simular</button>
+      <div id="simuladorResultado"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Registrar movimiento</div>
       <div class="chip-row">
         <div class="chip active" data-tipo="Gasto" onclick="setTipo('Gasto')">Gasto</div>
@@ -399,6 +416,8 @@
         <div class="chip" data-tipo="Ahorro" onclick="setTipo('Ahorro')">Ahorro</div>
       </div>
       <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota()">
+      <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('inputEscanearRegistro').click()">📷 Escanear boleta (llenar monto)</button>
+      <input type="file" id="inputEscanearRegistro" accept="image/*" capture="environment" style="display:none;" onchange="escanearBoletaRegistrarUI(this.files[0])">
       <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
       <div class="field" id="fMetodoWrap"><label>Método</label><div class="chip-row" id="fMetodos"></div></div>
       <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
@@ -1257,6 +1276,117 @@ function renderFormOpciones(){
   document.getElementById('compartirWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   document.getElementById('cuotasWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   actualizarAvisoTarjetaAjena(getMetodos(tipoActual)[0]);
+  renderSimuladorOpciones();
+}
+
+// ---------- SIMULADOR DE COMPRA ----------
+function renderSimuladorOpciones(){
+  const catsWrap = document.getElementById('simCategorias'); catsWrap.innerHTML = '';
+  CATS.Gasto.forEach((c,i) => {
+    const div = document.createElement('div');
+    div.className = 'chip' + (i===0?' active':'');
+    div.textContent = c;
+    div.onclick = () => { catsWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); };
+    catsWrap.appendChild(div);
+  });
+  const metWrap = document.getElementById('simMetodos'); metWrap.innerHTML = '';
+  getMetodos('Gasto').filter(m => m.indexOf('Pago a ')!==0).forEach((m,i) => {
+    const div = document.createElement('div');
+    div.className = 'chip' + (i===0?' active':'');
+    div.textContent = m;
+    div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); };
+    metWrap.appendChild(div);
+  });
+}
+function toggleSimCuotas(){
+  document.getElementById('simCuotasCampos').style.display = document.getElementById('simCuotas').checked ? 'block' : 'none';
+}
+function simularCompra(){
+  const monto = parseFloat(document.getElementById('simMonto').value);
+  if (!monto || monto <= 0){ showToast('Ingresa un monto válido'); return; }
+  const categoria = document.querySelector('#simCategorias .chip.active')?.textContent || '';
+  const metodo = document.querySelector('#simMetodos .chip.active')?.textContent || '';
+  const esCuotas = document.getElementById('simCuotas').checked;
+  const numCuotas = esCuotas ? (parseInt(document.getElementById('simNumCuotas').value) || 2) : 1;
+  const montoEsteMes = esCuotas ? monto / numCuotas : monto;
+
+  const now = new Date();
+  const delMes = misMovimientos().filter(m => { const f=new Date(m.Fecha); return f.getMonth()===now.getMonth() && f.getFullYear()===now.getFullYear(); });
+  const ingresos = sumaTipo(delMes,'Ingreso'), gastos = sumaTipo(delMes,'Gasto'), ahorroMes = sumaTipo(delMes,'Ahorro');
+  const balanceAntes = ingresos - gastos - ahorroMes;
+  const balanceDespues = balanceAntes - montoEsteMes;
+
+  const filas = [];
+  filas.push({ label:'Balance del mes', antes: balanceAntes, despues: balanceDespues, limite: null });
+
+  const tarjeta = getTarjetas().find(t => t.nombre === metodo);
+  if (tarjeta){
+    const uso = state.usoTarjetas[tarjeta.nombre] || { usado:0 };
+    const usadoAntes = Number(uso.usado||0);
+    const usadoDespues = usadoAntes + monto; // el compromiso total pega de una, sea o no a cuotas
+    filas.push({ label: tarjeta.nombre + ' usado', antes: usadoAntes, despues: usadoDespues, limite: Number(tarjeta.limite||0) });
+  }
+
+  const presupuestos = getPresupuestos()[MI_PERSONA] || {};
+  if (Number(presupuestos[categoria]) > 0){
+    const gastadoCatAntes = delMes.filter(m => m.Tipo==='Gasto' && m.Categoria===categoria).reduce((s,m)=>s+Number(m.Monto),0);
+    filas.push({ label: categoria + ' (presupuesto)', antes: gastadoCatAntes, despues: gastadoCatAntes + montoEsteMes, limite: Number(presupuestos[categoria]) });
+  }
+
+  if (esCuotas){
+    const comprometidoAntes = cuotasActivasDePersona(MI_PERSONA).reduce((s,g)=>s+g.cuotaMensual,0);
+    filas.push({ label:'Comprometido en cuotas/mes', antes: comprometidoAntes, despues: comprometidoAntes + montoEsteMes, limite: null });
+  }
+
+  const razones = [];
+  let puntos = 0;
+  if (balanceDespues < 0){ razones.push('Con esta compra tu balance del mes quedaría en negativo.'); puntos -= 2; }
+  else if (montoEsteMes > balanceAntes*0.3){ razones.push('Usarías más del 30% de tu disponible actual.'); puntos -= 1; }
+  else { razones.push('Tu balance seguiría siendo positivo.'); puntos += 1; }
+  if (tarjeta && Number(tarjeta.limite||0) > 0){
+    const usoFinal = Number((state.usoTarjetas[tarjeta.nombre]||{}).usado||0) + monto;
+    if (usoFinal > Number(tarjeta.limite)){ razones.push('Superarías el límite de '+tarjeta.nombre+'.'); puntos -= 2; }
+    else if (usoFinal > Number(tarjeta.limite)*0.85){ razones.push('Quedarías muy cerca del límite de '+tarjeta.nombre+'.'); puntos -= 1; }
+  }
+  if (Number(presupuestos[categoria]) > 0){
+    const gastadoCatDespues = delMes.filter(m => m.Tipo==='Gasto' && m.Categoria===categoria).reduce((s,m)=>s+Number(m.Monto),0) + montoEsteMes;
+    if (gastadoCatDespues > Number(presupuestos[categoria])) razones.push('Te pasarías del presupuesto de '+categoria+' este mes.');
+  }
+  let verdictClass, verdictText;
+  if (puntos >= 1){ verdictClass='go'; verdictText='✅ Se ve bien'; }
+  else if (puntos >= -1){ verdictClass='warn'; verdictText='⚠️ Con cuidado'; }
+  else { verdictClass='stop'; verdictText='🛑 Mejor espera'; }
+
+  const filasHtml = filas.map(f => {
+    if (f.limite){
+      const pct = Math.min(100, (f.despues/f.limite)*100);
+      const clase = f.despues > f.limite ? 'danger' : (f.despues > f.limite*0.85 ? 'warn' : 'good');
+      return '<div class="bar-row"><div class="bar-label"><span>'+f.label+'</span><span>S/'+f.antes.toFixed(2)+' → S/'+f.despues.toFixed(2)+' / S/'+f.limite.toFixed(2)+'</span></div>' +
+        '<div class="bar-track"><div class="bar-fill '+clase+'" style="width:'+pct+'%"></div></div></div>';
+    }
+    const colorTxt = f.despues < 0 ? 'var(--danger)' : 'var(--good)';
+    return '<div class="bar-row"><div class="bar-label"><span>'+f.label+'</span><span style="color:'+colorTxt+'; font-weight:700;">S/'+f.antes.toFixed(2)+' → S/'+f.despues.toFixed(2)+'</span></div></div>';
+  }).join('');
+
+  document.getElementById('simuladorResultado').innerHTML =
+    '<div class="advisor-box"><div class="advisor-verdict '+verdictClass+'">'+verdictText+'</div>' +
+    filasHtml +
+    '<ul>'+razones.map(r=>'<li>'+r+'</li>').join('')+'</ul>' +
+    '<button class="btn btn-sm btn-primary" style="margin-top:10px;" onclick="registrarDesdeSimulador('+monto+',\''+categoria+'\',\''+metodo+'\','+esCuotas+','+numCuotas+')">✅ Sí, registrar esta compra</button>' +
+    '</div>';
+}
+function registrarDesdeSimulador(monto, categoria, metodo, esCuotas, numCuotas){
+  const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
+  const payload = esCuotas
+    ? { categoria, metodo, montoTotal: monto, numCuotas, descripcion: 'Desde simulador', persona: MI_PERSONA, compartido: [] }
+    : { tipo:'Gasto', categoria, metodo, monto, descripcion: 'Desde simulador', persona: MI_PERSONA, compartido: [] };
+  postData(accion, payload).then(res => {
+    if (res.error) return;
+    showToast('Registrado ✅');
+    document.getElementById('simMonto').value = '';
+    document.getElementById('simuladorResultado').innerHTML = '';
+    cargarDatos();
+  });
 }
 function actualizarAvisoTarjetaAjena(metodo){
   const aviso = document.getElementById('avisoTarjetaAjena');
@@ -1559,6 +1689,44 @@ function recalcularPrecioDescuento(prefix){
 }
 // ---------- ESCANEAR BOLETA (OCR) ----------
 let candidatosEscaneoActual = [];
+// Para un movimiento normal (no itemizado) solo nos interesa el TOTAL de la
+// boleta, no cada producto. Busca líneas con "TOTAL" (sin ser "SUBTOTAL") y
+// se queda con el número al final; prioriza las que digan "PAGAR" o
+// "IMPORTE TOTAL" (suelen ser el monto realmente cobrado, no un subtotal).
+function extraerTotalSugerido(texto){
+  let preferido = null, cualquiera = null;
+  texto.split('\n').forEach(lineaOriginal => {
+    const linea = lineaOriginal.trim();
+    const mayus = linea.toUpperCase();
+    if (mayus.indexOf('SUBTOTAL') !== -1 || mayus.indexOf('TOTAL') === -1) return;
+    const numeros = [...linea.matchAll(/\d{1,4}[.,]\d{2}/g)];
+    if (!numeros.length) return;
+    const valor = parseFloat(numeros[numeros.length-1][0].replace(',', '.'));
+    if (mayus.indexOf('PAGAR') !== -1 || mayus.indexOf('IMPORTE') !== -1) preferido = valor;
+    cualquiera = valor;
+  });
+  return preferido !== null ? preferido : cualquiera;
+}
+function escanearBoletaRegistrarUI(archivo){
+  if (!archivo) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    showToast('Leyendo la boleta…');
+    postData('escanearBoleta', { base64, mime: archivo.type }).then(res => {
+      if (res.error){ alert('No se pudo escanear la boleta:\n\n' + res.error); return; }
+      const total = extraerTotalSugerido(res.texto || '');
+      const primeraLinea = (res.texto || '').split('\n').map(l => l.trim()).filter(l => l)[0] || '';
+      if (total){
+        document.getElementById('fMonto').value = total.toFixed(2);
+        previsualizarCuota();
+      }
+      if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
+      showToast(total ? ('Detecté S/'+total.toFixed(2)+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
+    });
+  };
+  reader.readAsDataURL(archivo);
+}
 function escanearBoletaUI(archivo){
   if (!archivo) return;
   const reader = new FileReader();
