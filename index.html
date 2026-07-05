@@ -1581,21 +1581,23 @@ function escanearBoletaUI(archivo){
 function renderCandidatosEscaneo(){
   document.getElementById('listaCandidatosEscaneo').innerHTML = candidatosEscaneoActual.map((c,i) =>
     '<div class="split-row"><label class="check" style="flex:0;"><input type="checkbox" id="cand'+i+'chk" checked></label>' +
-    '<input type="text" id="cand'+i+'nombre" value="'+c.producto.replace(/"/g,'&quot;')+'" style="flex:2;">' +
-    '<input type="number" id="cand'+i+'precio" value="'+c.precio.toFixed(2)+'" step="0.01" style="flex:1;"></div>'
+    '<input type="text" id="cand'+i+'nombre" value="'+c.producto.replace(/"/g,'&quot;')+'" style="flex:2;" placeholder="Producto">' +
+    '<input type="number" id="cand'+i+'cantidad" value="'+(c.cantidad||1)+'" step="0.01" style="flex:0.6;" title="Cantidad">' +
+    '<input type="number" id="cand'+i+'precio" value="'+c.precio.toFixed(2)+'" step="0.01" style="flex:0.8;" title="Precio unitario"></div>'
   ).join('');
 }
 function agregarCandidatosEscaneados(){
   const seleccionados = candidatosEscaneoActual.map((c,i) => ({
     marcado: document.getElementById('cand'+i+'chk').checked,
     producto: document.getElementById('cand'+i+'nombre').value.trim(),
+    cantidad: parseFloat(document.getElementById('cand'+i+'cantidad').value) || 1,
     precio: parseFloat(document.getElementById('cand'+i+'precio').value) || 0
   })).filter(c => c.marcado && c.producto && c.precio > 0);
   if (!seleccionados.length){ showToast('No marcaste ningún producto'); return; }
   let pendientes = seleccionados.length;
   seleccionados.forEach(c => {
     postData('addProductoCompra', {
-      compraId: compraSeleccionadaId, producto: c.producto, cantidad: 1, precioVitrina: c.precio, precioReal: c.precio,
+      compraId: compraSeleccionadaId, producto: c.producto, cantidad: c.cantidad, precioVitrina: c.precio, precioReal: c.precio,
       tieneDescuento: false, tipoDivision: '', miembros: []
     }).then(() => {
       pendientes--;
