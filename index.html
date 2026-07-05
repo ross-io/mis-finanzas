@@ -116,7 +116,8 @@
   .advisor-box li{margin-bottom:3px;}
 
   .setup-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
-  .toast{position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--good); color:#052e22; padding:10px 18px; border-radius:999px; font-size:13px; font-weight:700; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; white-space:nowrap;}
+  .toast{position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--good); color:#052e22; padding:10px 18px; border-radius:16px; font-size:13px; font-weight:700; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; max-width:calc(100vw - 32px); width:max-content; white-space:normal; word-break:break-word; text-align:center; box-shadow:var(--shadow);}
+  .toast.error{background:var(--danger); color:#ffffff;}
   .toast.show{opacity:1;}
 
   .loading-indicator{
@@ -1565,7 +1566,10 @@ function escanearBoletaUI(archivo){
     const base64 = reader.result.split(',')[1];
     showToast('Leyendo la boleta… puede tardar unos segundos');
     postData('escanearBoleta', { base64, mime: archivo.type }).then(res => {
-      if (res.error) return;
+      if (res.error){
+        alert('No se pudo escanear la boleta:\n\n' + res.error);
+        return;
+      }
       candidatosEscaneoActual = res.candidatos || [];
       if (!candidatosEscaneoActual.length){ showToast('No se detectaron productos — puedes agregarlos a mano'); return; }
       renderCandidatosEscaneo();
@@ -2189,8 +2193,12 @@ function guardarConfig(){
 // ---------- UTIL ----------
 function showToast(msg){
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  t.textContent = msg;
+  t.classList.toggle('error', /^Error/i.test(msg));
+  t.classList.add('show');
+  const duracion = Math.min(7000, Math.max(2200, msg.length * 60));
+  clearTimeout(t._timeoutId);
+  t._timeoutId = setTimeout(() => t.classList.remove('show'), duracion);
 }
 
 initApp();
