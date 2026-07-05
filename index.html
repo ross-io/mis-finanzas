@@ -342,7 +342,10 @@
     <div id="compraDetalleWrap" class="full-width" style="display:none;">
       <div class="card">
         <span class="close-x" onclick="cerrarDetalleCompra()">✕ volver</span>
-        <div class="card-title" id="detalleCompraTitulo" style="margin-top:24px;"></div>
+        <div class="card-title with-action" style="margin-top:24px;">
+          <span id="detalleCompraTitulo"></span>
+          <button class="btn btn-sm btn-secondary" onclick="editarCompraActual()">✏️ Nombre/fecha</button>
+        </div>
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
         <button class="btn btn-secondary" id="btnEscanearBoleta" onclick="document.getElementById('inputEscanearBoleta').click()" style="margin-bottom:12px;">📷 Escanear boleta y sugerir productos</button>
@@ -431,6 +434,7 @@
           <div id="previaCuota" style="font-size:13px; color:var(--text-dim); margin-top:-6px;"></div>
         </div>
       </div>
+      <div class="field"><label>Fecha</label><input type="date" id="fFecha"></div>
       <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" placeholder="ej. Almuerzo con Rappi"></div>
       <div class="field" id="compartirWrap">
         <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir()"> Se comparte con alguien</label>
@@ -559,6 +563,7 @@
     <span class="close-x" onclick="cerrarModal('modalNuevaCompra')">✕</span>
     <h3>Nueva compra de supermercado</h3>
     <div class="field"><label>Nombre / lugar</label><input type="text" id="ncNombre" placeholder="ej. Plaza Vea - semana"></div>
+    <div class="field"><label>Fecha de la compra</label><input type="date" id="ncFecha"></div>
     <button class="btn btn-primary" onclick="confirmarNuevaCompra()">Crear e ir a agregar productos</button>
   </div>
 </div>
@@ -652,6 +657,7 @@
     <div class="field"><label>Categoría</label><div class="chip-row" id="emCategorias"></div></div>
     <div class="field" id="emMetodoWrap"><label>Método</label><div class="chip-row" id="emMetodos"></div></div>
     <div class="field"><label>Monto (S/)</label><input type="number" id="emMonto" step="0.01"></div>
+    <div class="field"><label>Fecha</label><input type="date" id="emFecha"></div>
     <div class="field"><label>Descripción</label><input type="text" id="emDescripcion"></div>
     <div class="field" id="emCompartirWrap">
       <label class="check"><input type="checkbox" id="emCompartir" onclick="toggleCompartirEdicion()"> Se comparte con alguien</label>
@@ -948,6 +954,7 @@ function mostrarApp(){
   document.getElementById('personaPillNombre').textContent = MI_PERSONA;
   aplicarVista(localStorage.getItem('finanzas_view') || 'auto');
   aplicarTema(localStorage.getItem('finanzas_tema') || 'claro');
+  document.getElementById('fFecha').value = new Date().toISOString().slice(0,10);
   render();
 }
 
@@ -1184,12 +1191,15 @@ function renderTarjetasResumen(){
     const cicloTxt = ciclo
       ? '<div class="tv-ciclo">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
       : '';
+    const desgloseTxt = (uso.arrastrado !== null && uso.arrastrado !== undefined)
+      ? '<div class="tv-ciclo">📦 Arrastre de antes: S/'+Number(uso.arrastrado).toFixed(2)+' · 🆕 Nuevo desde el cierre: S/'+Number(uso.nuevo).toFixed(2)+' (esto es lo que cae en tu próximo recibo)</div>'
+      : '';
     return '<div class="tarjeta-visual" style="background:linear-gradient(135deg, '+color+', '+oscurecerColor(color,0.35)+')">' +
       '<div class="tv-top"><span>'+t.nombre+'</span><span class="tv-dueno">de '+t.propietario+'</span></div>' +
       '<div class="tv-numero">•••• •••• •••• ••••</div>' +
       '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:#ffffff;"></div></div>' +
-      cicloTxt + '</div>';
+      cicloTxt + desgloseTxt + '</div>';
   }).join('');
 }
 function renderPresupuestosResumen(delMes){
@@ -1439,6 +1449,8 @@ function guardarMovimiento(){
   const categoria = document.querySelector('#fCategorias .chip.active')?.textContent || '';
   const metodo = document.querySelector('#fMetodos .chip.active')?.textContent || '';
   const descripcion = document.getElementById('fDescripcion').value;
+  const fechaTexto = document.getElementById('fFecha').value;
+  const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
   let compartido = [];
   if (tipoActual === 'Gasto' && document.getElementById('fCompartir').checked){
     document.querySelectorAll('.split-row').forEach(row => {
@@ -1450,12 +1462,14 @@ function guardarMovimiento(){
   const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
   const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
   const payload = esCuotas
-    ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido }
-    : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido };
-  postData(accion, payload).then(() => {
+    ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido, fechaInicio: fecha }
+    : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido, fecha };
+  postData(accion, payload).then(res => {
+    if (res.error) return;
     showToast(esCuotas ? 'Cuotas registradas ✅' : 'Registrado ✅');
     document.getElementById('fMonto').value = '';
     document.getElementById('fDescripcion').value = '';
+    document.getElementById('fFecha').value = new Date().toISOString().slice(0,10);
     document.getElementById('fCompartir').checked = false;
     document.getElementById('compartirRows').innerHTML = '';
     toggleCompartir();
@@ -1506,6 +1520,9 @@ function consultarAsesor(){
           razones.push('Con '+t.nombre+' cierra en '+ciclo.diasHastaCierre+' día(s) ('+fechaCierreTxt+'). Si puedes esperar a que cierre, ganarías ~'+ciclo.diasGanadosSiEsperas+' días más de plazo para pagar.');
         } else {
           razones.push('Con '+t.nombre+', si compras hoy tendrías hasta el '+fechaPagoTxt+' para pagar ('+ciclo.diasDePlazoSiComprasHoy+' días de plazo).');
+        }
+        if (uso.arrastrado !== null && uso.arrastrado !== undefined && (uso.arrastrado > 0 || uso.nuevo > 0)){
+          razones.push('De lo usado en '+t.nombre+', S/'+Number(uso.arrastrado).toFixed(2)+' ya es arrastre de ciclos anteriores y S/'+Number(uso.nuevo).toFixed(2)+' es nuevo desde el último cierre — esta compra se sumaría a lo nuevo.');
         }
       }
     }
@@ -1586,10 +1603,16 @@ function renderCompras(){
       '</div></div><div style="text-align:right;"><div class="mov-amount">S/'+total.toFixed(2)+'</div><span class="estado-tag '+c.Estado+'">'+c.Estado+'</span></div></div>';
   }).join('');
 }
-function abrirNuevaCompra(){ document.getElementById('ncNombre').value = ''; abrirModal('modalNuevaCompra'); }
+function abrirNuevaCompra(){
+  document.getElementById('ncNombre').value = '';
+  document.getElementById('ncFecha').value = new Date().toISOString().slice(0,10);
+  abrirModal('modalNuevaCompra');
+}
 function confirmarNuevaCompra(){
   const nombre = document.getElementById('ncNombre').value.trim() || ('Compra ' + new Date().toLocaleDateString('es-PE'));
-  postData('addCompra', { nombre, persona: MI_PERSONA }).then(res => {
+  const fechaTexto = document.getElementById('ncFecha').value;
+  const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
+  postData('addCompra', { nombre, persona: MI_PERSONA, fecha }).then(res => {
     if (!res.id) return;
     cerrarModal('modalNuevaCompra');
     cargarDatosYAbrirCompra(res.id);
@@ -1722,7 +1745,8 @@ function escanearBoletaRegistrarUI(archivo){
         previsualizarCuota();
       }
       if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
-      showToast(total ? ('Detecté S/'+total.toFixed(2)+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
+      if (res.fechaDetectada) document.getElementById('fFecha').value = res.fechaDetectada;
+      showToast(total ? ('Detecté S/'+total.toFixed(2)+(res.fechaDetectada?' del '+res.fechaDetectada:'')+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
     });
   };
   reader.readAsDataURL(archivo);
@@ -1739,6 +1763,15 @@ function escanearBoletaUI(archivo){
         return;
       }
       candidatosEscaneoActual = res.candidatos || [];
+      if (res.fechaDetectada){
+        const compra = compraActual();
+        const fechaCompraActual = compra ? new Date(compra.Fecha).toISOString().slice(0,10) : null;
+        if (fechaCompraActual && fechaCompraActual !== res.fechaDetectada){
+          if (confirm('La boleta parece ser del '+res.fechaDetectada+', pero esta compra está fechada '+fechaCompraActual+'. ¿Actualizar la fecha de la compra al '+res.fechaDetectada+'?')){
+            postData('updateCompra', { id: compraSeleccionadaId, fecha: new Date(res.fechaDetectada+'T12:00:00').toISOString() });
+          }
+        }
+      }
       if (!candidatosEscaneoActual.length){ showToast('No se detectaron productos — puedes agregarlos a mano'); return; }
       renderCandidatosEscaneo();
       abrirModal('modalRevisarEscaneo');
@@ -1944,6 +1977,21 @@ function subirFoto(archivo, compraId){
   };
   reader.readAsDataURL(archivo);
 }
+function editarCompraActual(){
+  const compra = compraActual();
+  if (!compra) return;
+  const nuevoNombre = prompt('Nombre de la compra:', compra.Nombre);
+  if (nuevoNombre === null) return; // canceló
+  const fechaActual = new Date(compra.Fecha).toISOString().slice(0,10);
+  const nuevaFecha = prompt('Fecha de la compra (AAAA-MM-DD):', fechaActual);
+  if (nuevaFecha === null) return; // canceló
+  const fechaISO = nuevaFecha.trim() ? new Date(nuevaFecha.trim()+'T12:00:00').toISOString() : compra.Fecha;
+  postData('updateCompra', { id: compraSeleccionadaId, nombre: nuevoNombre.trim() || compra.Nombre, fecha: fechaISO }).then(res => {
+    if (res.error) return;
+    showToast('Compra actualizada ✅');
+    cargarDatosYAbrirCompra(compraSeleccionadaId);
+  });
+}
 function borrarCompra(){
   if (!confirm('¿Borrar esta compra completa y todos sus productos? El gasto ya creado en Historial NO se borra automáticamente.')) return;
   postData('deleteCompra', { id: compraSeleccionadaId }).then(() => {
@@ -2117,6 +2165,7 @@ function abrirEditarMovimiento(id){
   movimientoEditandoId = id;
   document.getElementById('emCuotaAviso').style.display = m.Cuotas ? 'block' : 'none';
   document.getElementById('emMonto').value = m.Monto;
+  document.getElementById('emFecha').value = new Date(m.Fecha).toISOString().slice(0,10);
   document.getElementById('emDescripcion').value = m.Descripcion || '';
 
   const catsWrap = document.getElementById('emCategorias'); catsWrap.innerHTML = '';
@@ -2171,6 +2220,8 @@ function guardarEdicionMovimiento(){
   const monto = parseFloat(document.getElementById('emMonto').value);
   if (!monto || monto <= 0){ showToast('Ingresa un monto válido'); return; }
   const descripcion = document.getElementById('emDescripcion').value;
+  const fechaTexto = document.getElementById('emFecha').value;
+  const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : m.Fecha;
 
   let compartido = [];
   if (m.Tipo === 'Gasto' && document.getElementById('emCompartir').checked){
@@ -2181,7 +2232,7 @@ function guardarEdicionMovimiento(){
     });
   }
 
-  postData('updateMovimiento', { id: movimientoEditandoId, categoria, metodo, monto, descripcion, compartido }).then(res => {
+  postData('updateMovimiento', { id: movimientoEditandoId, categoria, metodo, monto, descripcion, fecha, compartido }).then(res => {
     if (res.error) return;
     showToast('Movimiento actualizado ✅');
     cerrarModal('modalEditarMovimiento');
