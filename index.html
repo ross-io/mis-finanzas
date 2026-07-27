@@ -347,6 +347,7 @@
           <button class="btn btn-sm btn-secondary" onclick="editarCompraActual()">✏️ Nombre/fecha</button>
         </div>
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
+        <div id="resumenPersonasCompra" style="margin-bottom:14px;"></div>
         <button class="btn btn-sm btn-whatsapp" style="width:auto; margin-bottom:14px;" onclick="compartirCompraWhatsApp()">📲 Compartir división por WhatsApp</button>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
         <div id="escanearBoletaCompraWrap">
@@ -359,14 +360,19 @@
           <input type="file" id="inputFotoCompraGaleria" accept="image/*" multiple style="display:none;" onchange="agregarFotosBoletaUI('compra', this.files); this.value='';">
           <div id="fotosCompraPendientesWrap" style="display:none; margin-bottom:12px;"></div>
         </div>
+        <div class="field" id="buscarProductoCompraWrap" style="display:none;">
+          <input type="text" id="buscarProductoCompra" placeholder="🔍 Buscar producto en esta compra..." oninput="filtrarProductosCompra(this.value)">
+        </div>
         <div id="listaProductosCompra"></div>
         <div id="avisoCerrada" style="display:none; font-size:12px; color:var(--text-dim); margin:10px 0;">
           Esta compra ya fue finalizada. Aún puedes reasignar a quién le toca cada producto (el gasto se ajusta solo si cambias precios).
+          <button class="btn btn-sm btn-secondary" style="margin-top:8px; width:auto;" onclick="reabrirCompraUI()">🔓 Reabrir para corregir</button>
         </div>
         <button class="btn btn-secondary" id="btnAbrirFormProducto" onclick="toggleFormProducto()" style="margin-top:6px;">+ Agregar producto</button>
 
         <div id="formProductoWrap" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
           <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
+          <div class="field"><label>Foto del producto (opcional, ayuda a identificarlo si el nombre queda críptico)</label><input type="file" id="pFoto" accept="image/*"></div>
           <div class="row-2">
             <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso"></div>
             <div class="field"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
@@ -617,6 +623,11 @@
     <h3 id="editarProductoTitulo">Editar producto</h3>
     <div id="editarProductoCamposPrecio">
       <div class="field"><label>Producto</label><input type="text" id="epNombre"></div>
+      <div class="field">
+        <label>Foto del producto</label>
+        <div id="epFotoPreview" style="margin-bottom:6px;"></div>
+        <input type="file" id="epFoto" accept="image/*" onchange="subirFotoProductoUI(this.files[0])">
+      </div>
       <div class="row-2">
         <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01"></div>
         <div class="field"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
@@ -735,6 +746,7 @@ let tipoActual = 'Gasto';
 let filtroHistorial = 'Todos';
 let pagoActual = null; // {deudor, acreedor}
 let compraSeleccionadaId = null;
+let filtroProductoCompra = ''; // texto buscado dentro del detalle de la compra actual
 let productoEditandoId = null;
 
 const CATS = {
@@ -1763,8 +1775,9 @@ function confirmarNuevaCompra(){
     cargarDatosYAbrirCompra(res.id);
   });
 }
-function abrirDetalleCompra(id){ compraSeleccionadaId = id; document.getElementById('formProductoWrap').style.display = 'none'; limpiarFotosBoletaPendientes('compra'); renderCompras(); }
-function cerrarDetalleCompra(){ compraSeleccionadaId = null; limpiarFotosBoletaPendientes('compra'); renderCompras(); }
+function abrirDetalleCompra(id){ compraSeleccionadaId = id; document.getElementById('formProductoWrap').style.display = 'none'; limpiarFotosBoletaPendientes('compra'); filtroProductoCompra = ''; renderCompras(); }
+function cerrarDetalleCompra(){ compraSeleccionadaId = null; limpiarFotosBoletaPendientes('compra'); filtroProductoCompra = ''; renderCompras(); }
+function filtrarProductosCompra(valor){ filtroProductoCompra = valor; renderDetalleCompra(); }
 function compraActual(){ return state.compras.find(c => c.ID === compraSeleccionadaId); }
 function productosDeCompraActual(){ return state.productosCompra.filter(p => p.CompraID === compraSeleccionadaId); }
 
@@ -1780,6 +1793,7 @@ function renderDetalleCompra(){
   document.getElementById('detalleCompraTitulo').textContent = compra.Nombre;
   document.getElementById('detalleCompraResumen').textContent =
     productos.length + ' producto(s) · Total S/' + total.toFixed(2) + ' · Creada por ' + (compra.Persona||'?') + (ahorroTotal>0 ? ' · Ahorraste S/'+ahorroTotal.toFixed(2) : '');
+  renderResumenPersonasCompra(compra, productos);
 
   const fotoWrap = document.getElementById('fotoBoletaWrap');
   fotoWrap.innerHTML = compra.FotoURL ? '<a href="'+compra.FotoURL+'" target="_blank" class="chip small">📷 Ver foto de la boleta</a>' : '';
@@ -1791,8 +1805,14 @@ function renderDetalleCompra(){
   document.getElementById('btnFinalizarCompra').style.display = cerrada ? 'none' : 'block';
 
   const wrap = document.getElementById('listaProductosCompra');
+  const buscarWrap = document.getElementById('buscarProductoCompraWrap');
+  buscarWrap.style.display = productos.length > 4 ? 'block' : 'none';
   if (!productos.length){ wrap.innerHTML = '<div class="empty">Agrega el primer producto de la lista 👇</div>'; return; }
-  wrap.innerHTML = productos.map(p => {
+
+  const filtro = filtroProductoCompra.trim().toLowerCase();
+  const productosFiltrados = filtro ? productos.filter(p => p.Producto.toLowerCase().includes(filtro)) : productos;
+  if (!productosFiltrados.length){ wrap.innerHTML = '<div class="empty">Ningún producto coincide con "'+filtro+'"</div>'; return; }
+  wrap.innerHTML = productosFiltrados.map(p => {
     let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
     let divisionTxt, sinAsignar = false;
     if (!miembros.length){ divisionTxt = '❔ Sin asignar todavía'; sinAsignar = true; }
@@ -1803,8 +1823,9 @@ function renderDetalleCompra(){
     const descuentoTxt = esTrue(p.TieneDescuento)
       ? (p.DescuentoTipo === 'porcentaje' ? '-' + Number(p.DescuentoValor) + '%' : (Number(p.DescuentoValor) > 0 ? '-S/' + Number(p.DescuentoValor).toFixed(2) : 'Descuento'))
       : '';
+    const fotoThumb = p.FotoURL ? '<img src="'+p.FotoURL+'" onclick="window.open(\''+p.FotoURL+'\',\'_blank\')" style="width:44px; height:44px; object-fit:cover; border-radius:8px; margin-right:10px; flex-shrink:0; cursor:pointer;">' : '';
     return '<div class="producto-item">' +
-      '<div class="p-top"><div><div class="p-nombre">'+p.Producto+(descuentoTxt?'<span class="desc-badge">'+descuentoTxt+'</span>':'')+'</div>' +
+      '<div class="p-top">' + fotoThumb + '<div style="flex:1; min-width:0;"><div class="p-nombre">'+p.Producto+(descuentoTxt?'<span class="desc-badge">'+descuentoTxt+'</span>':'')+'</div>' +
       '<div class="p-precio">'+Number(p.Cantidad)+' x '+precioDiff+' S/'+Number(p.PrecioReal).toFixed(2)+'</div></div>' +
       '<div class="p-monto">S/'+Number(p.MontoTotal).toFixed(2)+'</div></div>' +
       '<div class="division-tag'+(sinAsignar?' sin-asignar':'')+'">'+divisionTxt+'</div>' +
@@ -1823,28 +1844,48 @@ function renderDetalleCompra(){
 // de WhatsApp específico de antemano sin la API de WhatsApp Business (no
 // disponible aquí) — por eso siempre es el USUARIO quien elige el chat/grupo
 // destino, ya sea en el selector nativo o dentro de WhatsApp directamente.
-function totalesPorPersonaDeCompra(compra, productos){
-  const totales = {};
+// Para cada persona involucrada en la compra: cuántos productos le tocan
+// (cuenta entera, aunque el producto se comparta) y cuánto le corresponde
+// pagar en total (sí prorrateado si es compartido). Los productos sin
+// asignar se cuentan como del creador de la compra — mismo criterio que al
+// finalizar ("quedarán como tuyos").
+function resumenPorPersonaDeCompra(compra, productos){
+  const resumen = {};
   productos.forEach(p => {
     let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
-    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar']; // igual criterio que al finalizar: sin asignar queda del creador
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
     const cadaUno = Number(p.MontoTotal || 0) / miembros.length;
-    miembros.forEach(m => { totales[m] = (totales[m]||0) + cadaUno; });
+    miembros.forEach(m => {
+      if (!resumen[m]) resumen[m] = { cantidad: 0, total: 0 };
+      resumen[m].cantidad += 1;
+      resumen[m].total += cadaUno;
+    });
   });
-  return totales;
+  return resumen;
+}
+function renderResumenPersonasCompra(compra, productos){
+  const wrap = document.getElementById('resumenPersonasCompra');
+  if (!productos.length){ wrap.innerHTML = ''; return; }
+  const resumen = resumenPorPersonaDeCompra(compra, productos);
+  const nombres = Object.keys(resumen).sort((a,b) => resumen[b].total - resumen[a].total);
+  wrap.innerHTML = '<div class="card-title">Por persona</div>' + nombres.map(n =>
+    '<div class="mov-item"><div class="mov-left"><div class="persona-avatar" style="background:'+colorPersona(n)+'">'+n.charAt(0).toUpperCase()+'</div><div>' +
+    '<div class="mov-desc">'+n+'</div><div class="mov-meta">'+resumen[n].cantidad+' producto(s)</div></div></div>' +
+    '<div class="mov-amount">S/'+resumen[n].total.toFixed(2)+'</div></div>'
+  ).join('');
 }
 function compartirCompraWhatsApp(){
   const compra = compraActual();
   const productos = productosDeCompraActual();
   if (!compra || !productos.length){ showToast('Agrega productos y asígnalos antes de compartir'); return; }
-  const totales = totalesPorPersonaDeCompra(compra, productos);
-  const nombres = Object.keys(totales).sort((a,b) => totales[b]-totales[a]);
+  const resumen = resumenPorPersonaDeCompra(compra, productos);
+  const nombres = Object.keys(resumen).sort((a,b) => resumen[b].total-resumen[a].total);
   if (!nombres.length){ showToast('Nada asignado todavía'); return; }
-  const totalGeneral = nombres.reduce((s,n) => s+totales[n], 0);
+  const totalGeneral = nombres.reduce((s,n) => s+resumen[n].total, 0);
   const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
 
   let texto = '🛒 *' + compra.Nombre + '* — ' + fechaTxt + '\n\n';
-  nombres.forEach(n => { texto += n + ': S/. ' + totales[n].toFixed(2) + '\n'; });
+  nombres.forEach(n => { texto += n + ': S/. ' + resumen[n].total.toFixed(2) + '\n'; });
   texto += '\nTotal: S/. ' + totalGeneral.toFixed(2);
 
   const canvas = document.getElementById('canvasExport');
@@ -1860,7 +1901,7 @@ function compartirCompraWhatsApp(){
     ctx.strokeStyle = '#eaebf3'; ctx.lineWidth = 1; ctx.strokeRect(24.5, y+0.5, w-49, 41);
     ctx.fillStyle = '#1e2433'; ctx.font = '15px sans-serif'; ctx.fillText(n, 38, y+26);
     ctx.fillStyle = '#0d9488'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('S/. '+totales[n].toFixed(2), w-40, y+26); ctx.textAlign = 'left';
+    ctx.fillText('S/. '+resumen[n].total.toFixed(2), w-40, y+26); ctx.textAlign = 'left';
     y += 50;
   });
   ctx.fillStyle = '#1e2433'; ctx.font = 'bold 17px sans-serif'; ctx.textAlign = 'right';
@@ -1896,6 +1937,7 @@ function toggleFormProducto(){
     document.getElementById('pReal').value = '';
     document.getElementById('pDescuento').checked = false;
     document.getElementById('pDescuentoValor').value = '';
+    document.getElementById('pFoto').value = '';
     document.getElementById('pDescuentoCampos').style.display = 'none';
     document.querySelectorAll('#pDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo==='monto'));
     renderDivisionPicker('pDivisionPicker', '', []);
@@ -2106,7 +2148,15 @@ async function agregarCandidatosEscaneados(){
     if (!document.getElementById('cand'+i+'chk').checked) return;
     const producto = document.getElementById('cand'+i+'nombre').value.trim();
     const cantidad = parseFloat(document.getElementById('cand'+i+'cantidad').value) || 1;
-    const precio = parseFloat(document.getElementById('cand'+i+'precio').value) || 0;
+    let precio = parseFloat(document.getElementById('cand'+i+'precio').value) || 0;
+    // Si la boleta imprimía el TOTAL real de esta línea por separado, y el
+    // usuario dejó cantidad/precio tal como los detectó el escaneo (no los
+    // corrigió a mano), se recalcula el precio unitario con más precisión a
+    // partir de ese total real — así el monto guardado coincide EXACTO con
+    // la boleta, en vez de arrastrar el redondeo a 2 decimales del precio
+    // unitario (normal sobre todo en productos por peso).
+    const sinTocar = Math.abs(cantidad - (c.cantidad||1)) < 0.001 && Math.abs(precio - (c.precio||0)) < 0.005;
+    if (c.totalLinea && sinTocar) precio = c.totalLinea / cantidad;
     if (producto && precio > 0) seleccionados.push({ indice: i, producto, cantidad, precio });
   });
   if (!seleccionados.length){ showToast('No marcaste ningún producto'); return; }
@@ -2150,6 +2200,7 @@ function guardarProductoCompra(){
   const vitrina = parseFloat(document.getElementById('pVitrina').value) || 0;
   const real = parseFloat(document.getElementById('pReal').value);
   const descuento = document.getElementById('pDescuento').checked;
+  const archivoFoto = document.getElementById('pFoto').files[0];
   if (!nombre){ showToast('Escribe el nombre del producto'); return; }
   if (!cantidad || cantidad <= 0){ showToast('Cantidad inválida'); return; }
   if (!real || real <= 0){ showToast('Ingresa el precio real cobrado en caja'); return; }
@@ -2158,9 +2209,35 @@ function guardarProductoCompra(){
     compraId: compraSeleccionadaId, producto: nombre, cantidad, precioVitrina: vitrina, precioReal: real,
     tieneDescuento: descuento, tipoDivision: division.tipo, miembros: division.miembros,
     descuentoTipo: descuento ? tipoDescuentoActivo('p') : '', descuentoValor: descuento ? (parseFloat(document.getElementById('pDescuentoValor').value)||0) : 0
-  }).then(() => {
-    showToast('Producto agregado ✅');
-    document.getElementById('formProductoWrap').style.display = 'none';
+  }).then(res => {
+    if (res.error) return;
+    const terminar = () => {
+      showToast('Producto agregado ✅');
+      document.getElementById('formProductoWrap').style.display = 'none';
+      cargarDatosYAbrirCompra(compraSeleccionadaId);
+    };
+    if (archivoFoto) { subirFotoProductoArchivo(archivoFoto, res.id).then(terminar); } else { terminar(); }
+  });
+}
+// Convierte una foto a base64 y la sube ligada a un producto puntual —
+// reutilizado tanto al crear un producto nuevo (con foto) como al agregarle
+// una foto a uno ya existente desde "Editar producto".
+function subirFotoProductoArchivo(archivo, productoId){
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      postData('subirFotoProducto', { base64, mime: archivo.type, productoId }).then(resolve);
+    };
+    reader.readAsDataURL(archivo);
+  });
+}
+function subirFotoProductoUI(archivo){
+  if (!archivo || !productoEditandoId) return;
+  showToast('Subiendo foto…');
+  subirFotoProductoArchivo(archivo, productoEditandoId).then(res => {
+    if (res.error) return;
+    showToast('Foto guardada 📷');
     cargarDatosYAbrirCompra(compraSeleccionadaId);
   });
 }
@@ -2215,6 +2292,10 @@ function abrirEditarProducto(id){
   const compra = compraActual();
   const cerrada = compra && compra.Estado === 'Cerrada';
   document.getElementById('editarProductoCamposPrecio').style.display = cerrada ? 'none' : 'block';
+  document.getElementById('epFotoPreview').innerHTML = p.FotoURL
+    ? '<a href="'+p.FotoURL+'" target="_blank"><img src="'+p.FotoURL+'" style="width:72px; height:72px; object-fit:cover; border-radius:10px; border:1px solid var(--border);"></a>'
+    : '<span style="font-size:12px; color:var(--text-dim);">Sin foto todavía</span>';
+  document.getElementById('epFoto').value = '';
   document.getElementById('epNombre').value = p.Producto;
   document.getElementById('epCantidad').value = p.Cantidad;
   document.getElementById('epVitrina').value = p.PrecioVitrina;
@@ -2329,6 +2410,18 @@ function borrarCompra(){
   if (!confirm('¿Borrar esta compra completa y todos sus productos? El gasto ya creado en Historial NO se borra automáticamente.')) return;
   postData('deleteCompra', { id: compraSeleccionadaId }).then(() => {
     showToast('Compra borrada'); compraSeleccionadaId = null; cargarDatos(); irA('compras');
+  });
+}
+// Reabre una compra ya finalizada para poder agregar/editar productos o
+// cambiar el método de pago. Al volver a presionar "Finalizar compra", el
+// gasto ya creado en Historial se ACTUALIZA (no se duplica) — eso ya lo
+// maneja el backend.
+function reabrirCompraUI(){
+  if (!confirm('¿Reabrir esta compra? Vas a poder agregar/editar productos y volver a finalizar — el gasto que ya está en tu Historial se actualiza, no se duplica.')) return;
+  postData('reabrirCompra', { compraId: compraSeleccionadaId }).then(res => {
+    if (res.error) return;
+    showToast('Compra reabierta ✅');
+    cargarDatosYAbrirCompra(compraSeleccionadaId);
   });
 }
 
