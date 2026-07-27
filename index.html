@@ -374,7 +374,7 @@
           <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
           <div class="field"><label>Foto del producto (opcional, ayuda a identificarlo si el nombre queda críptico)</label><input type="file" id="pFoto" accept="image/*"></div>
           <div class="row-2">
-            <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso"></div>
+            <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso" oninput="recalcularMontoTotal('p')"></div>
             <div class="field"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
           </div>
           <div class="field">
@@ -389,7 +389,12 @@
               </div>
             </div>
           </div>
-          <div class="field"><label>Precio real cobrado en caja (S/ x unidad o x kg)</label><input type="number" id="pReal" step="0.01"></div>
+          <div class="field"><label>Precio real cobrado en caja (S/ x unidad o x kg)</label><input type="number" id="pReal" step="0.01" oninput="recalcularMontoTotal('p')"></div>
+          <div class="field">
+            <label>Monto total de este producto (S/)</label>
+            <input type="number" id="pMontoTotal" step="0.01">
+            <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
+          </div>
           <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Para frutas/verduras u otros por peso: pon el peso en Cantidad (ej. 0.654 kg) y el precio POR KG en los campos de precio — la app multiplica sola.</p>
           <div class="field"><label>¿Cómo se divide?</label><div id="pDivisionPicker"></div></div>
           <button class="btn btn-primary" onclick="guardarProductoCompra()">Guardar producto</button>
@@ -629,7 +634,7 @@
         <input type="file" id="epFoto" accept="image/*" onchange="subirFotoProductoUI(this.files[0])">
       </div>
       <div class="row-2">
-        <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01"></div>
+        <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
         <div class="field"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
       </div>
       <div class="field">
@@ -644,7 +649,12 @@
           </div>
         </div>
       </div>
-      <div class="field"><label>Precio real (S/ x unidad o x kg)</label><input type="number" id="epReal" step="0.01"></div>
+      <div class="field"><label>Precio real (S/ x unidad o x kg)</label><input type="number" id="epReal" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
+      <div class="field">
+        <label>Monto total de este producto (S/)</label>
+        <input type="number" id="epMontoTotal" step="0.01">
+        <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
+      </div>
     </div>
     <div class="field"><label>¿Cómo se divide? (puedes moverlo cuando quieras)</label><div id="epDivisionPicker"></div></div>
     <button class="btn btn-primary" onclick="guardarEdicionProducto()">Guardar cambios</button>
@@ -1935,6 +1945,7 @@ function toggleFormProducto(){
     document.getElementById('pCantidad').value = 1;
     document.getElementById('pVitrina').value = '';
     document.getElementById('pReal').value = '';
+    document.getElementById('pMontoTotal').value = '';
     document.getElementById('pDescuento').checked = false;
     document.getElementById('pDescuentoValor').value = '';
     document.getElementById('pFoto').value = '';
@@ -1969,6 +1980,17 @@ function recalcularPrecioDescuento(prefix){
   const tipo = tipoDescuentoActivo(prefix);
   const real = tipo === 'porcentaje' ? vitrina * (1 - valor/100) : Math.max(0, vitrina - valor);
   document.getElementById(prefix+'Real').value = real.toFixed(2);
+  recalcularMontoTotal(prefix);
+}
+// Recalcula en vivo el "Monto total" mostrado (cantidad × precio real) cada
+// vez que cambia cantidad o precio. El usuario puede sobrescribir este
+// campo a mano si el total no calza exacto con lo impreso en la boleta —
+// guardarProductoCompra()/guardarEdicionProducto() detectan esa diferencia
+// al guardar y usan el monto escrito, ajustando el precio unitario interno.
+function recalcularMontoTotal(prefix){
+  const cantidad = parseFloat(document.getElementById(prefix+'Cantidad').value) || 0;
+  const real = parseFloat(document.getElementById(prefix+'Real').value) || 0;
+  if (cantidad > 0 && real > 0) document.getElementById(prefix+'MontoTotal').value = (cantidad*real).toFixed(2);
 }
 // ---------- ESCANEAR BOLETA (OCR) ----------
 let candidatosEscaneoActual = [];
@@ -2198,12 +2220,17 @@ function guardarProductoCompra(){
   const nombre = document.getElementById('pNombre').value.trim();
   const cantidad = parseFloat(document.getElementById('pCantidad').value);
   const vitrina = parseFloat(document.getElementById('pVitrina').value) || 0;
-  const real = parseFloat(document.getElementById('pReal').value);
+  let real = parseFloat(document.getElementById('pReal').value);
   const descuento = document.getElementById('pDescuento').checked;
   const archivoFoto = document.getElementById('pFoto').files[0];
   if (!nombre){ showToast('Escribe el nombre del producto'); return; }
   if (!cantidad || cantidad <= 0){ showToast('Cantidad inválida'); return; }
   if (!real || real <= 0){ showToast('Ingresa el precio real cobrado en caja'); return; }
+  // Si el usuario corrigió a mano el "Monto total" (para que calce con la
+  // boleta), se usa ESE monto: se ajusta el precio unitario internamente
+  // para que cantidad × precio reproduzca exactamente lo que escribió.
+  const montoCampo = parseFloat(document.getElementById('pMontoTotal').value) || 0;
+  if (montoCampo > 0 && Math.abs(montoCampo - cantidad*real) > 0.005) real = montoCampo / cantidad;
   const division = leerDivisionPicker('pDivisionPicker');
   postData('addProductoCompra', {
     compraId: compraSeleccionadaId, producto: nombre, cantidad, precioVitrina: vitrina, precioReal: real,
@@ -2300,6 +2327,7 @@ function abrirEditarProducto(id){
   document.getElementById('epCantidad').value = p.Cantidad;
   document.getElementById('epVitrina').value = p.PrecioVitrina;
   document.getElementById('epReal').value = p.PrecioReal;
+  document.getElementById('epMontoTotal').value = Number(p.MontoTotal).toFixed(2);
   document.getElementById('epDescuento').checked = esTrue(p.TieneDescuento);
   document.getElementById('epDescuentoValor').value = p.DescuentoValor || '';
   document.querySelectorAll('#epDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo === (p.DescuentoTipo || 'monto')));
@@ -2322,7 +2350,13 @@ function guardarEdicionProducto(){
     data.producto = document.getElementById('epNombre').value.trim();
     data.cantidad = parseFloat(document.getElementById('epCantidad').value);
     data.precioVitrina = parseFloat(document.getElementById('epVitrina').value) || 0;
-    data.precioReal = parseFloat(document.getElementById('epReal').value);
+    let precioReal = parseFloat(document.getElementById('epReal').value);
+    // Si el usuario corrigió a mano el "Monto total" (para que calce con la
+    // boleta), se usa ESE monto: se ajusta el precio unitario para que
+    // cantidad × precio reproduzca exactamente lo que escribió.
+    const montoCampo = parseFloat(document.getElementById('epMontoTotal').value) || 0;
+    if (montoCampo > 0 && data.cantidad > 0 && Math.abs(montoCampo - data.cantidad*precioReal) > 0.005) precioReal = montoCampo / data.cantidad;
+    data.precioReal = precioReal;
     data.tieneDescuento = document.getElementById('epDescuento').checked;
     data.descuentoTipo = data.tieneDescuento ? tipoDescuentoActivo('ep') : '';
     data.descuentoValor = data.tieneDescuento ? (parseFloat(document.getElementById('epDescuentoValor').value)||0) : 0;
