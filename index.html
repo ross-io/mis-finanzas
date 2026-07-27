@@ -348,7 +348,7 @@
         </div>
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
         <div id="resumenPersonasCompra" style="margin-bottom:14px;"></div>
-        <button class="btn btn-sm btn-whatsapp" style="width:auto; margin-bottom:14px;" onclick="compartirCompraWhatsApp()">📲 Compartir división por WhatsApp</button>
+        <button class="btn btn-sm btn-whatsapp" style="width:auto; margin-bottom:14px;" onclick="abrirDetalleCompartir()">📲 Ver detalle para compartir</button>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
         <div id="escanearBoletaCompraWrap">
           <div class="row-2" style="margin-bottom:4px;">
@@ -372,12 +372,15 @@
 
         <div id="formProductoWrap" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
           <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="pEsTransporte" onclick="toggleCamposTransporte('p')"> 🚕 Es transporte (taxi, pasaje — no un producto del súper)</label>
+          </div>
           <div class="field"><label>Foto del producto (opcional, ayuda a identificarlo si el nombre queda críptico)</label><input type="file" id="pFoto" accept="image/*"></div>
           <div class="row-2">
             <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso" oninput="recalcularMontoTotal('p')"></div>
-            <div class="field"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
+            <div class="field" id="pVitrinaWrap"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
           </div>
-          <div class="field">
+          <div class="field" id="pDescuentoWrap">
             <label class="check"><input type="checkbox" id="pDescuento" onclick="toggleDescuentoCampos('p')"> Tiene descuento</label>
             <div id="pDescuentoCampos" style="display:none; margin-top:8px;">
               <div class="row-2">
@@ -629,15 +632,18 @@
     <div id="editarProductoCamposPrecio">
       <div class="field"><label>Producto</label><input type="text" id="epNombre"></div>
       <div class="field">
+        <label class="check"><input type="checkbox" id="epEsTransporte" onclick="toggleCamposTransporte('ep')"> 🚕 Es transporte (taxi, pasaje — no un producto del súper)</label>
+      </div>
+      <div class="field">
         <label>Foto del producto</label>
         <div id="epFotoPreview" style="margin-bottom:6px;"></div>
         <input type="file" id="epFoto" accept="image/*" onchange="subirFotoProductoUI(this.files[0])">
       </div>
       <div class="row-2">
         <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
-        <div class="field"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
+        <div class="field" id="epVitrinaWrap"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
       </div>
-      <div class="field">
+      <div class="field" id="epDescuentoWrap">
         <label class="check"><input type="checkbox" id="epDescuento" onclick="toggleDescuentoCampos('ep')"> Tiene descuento</label>
         <div id="epDescuentoCampos" style="display:none; margin-top:8px;">
           <div class="row-2">
@@ -669,9 +675,24 @@
     <span class="close-x" onclick="cerrarModal('modalFinalizarCompra')">✕</span>
     <h3>Finalizar compra</h3>
     <p id="finalizarResumen" style="color:var(--text-dim); font-size:14px;"></p>
-    <div class="field"><label>¿Con qué pagaste en caja?</label><div class="chip-row" id="finalizarMetodos"></div></div>
+    <div class="field"><label>¿Con qué pagaste el súper?</label><div class="chip-row" id="finalizarMetodos"></div></div>
+    <div class="field" id="finalizarTransporteWrap" style="display:none;">
+      <label>🚕 ¿Con qué pagaste el transporte? (puede ser distinto)</label>
+      <div class="chip-row" id="finalizarMetodosTransporte"></div>
+    </div>
     <div class="field"><label>Foto de la boleta (opcional)</label><input type="file" id="finalizarFoto" accept="image/*" capture="environment"></div>
     <button class="btn btn-primary" onclick="confirmarFinalizarCompra()">Confirmar y crear el gasto</button>
+  </div>
+</div>
+
+<!-- MODAL DETALLE PARA COMPARTIR (HTML normal, sin canvas — se ve nítido en cualquier celular) -->
+<div class="modal-bg" id="modalDetalleCompartir">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalDetalleCompartir')">✕</span>
+    <h3 id="detalleCompartirTitulo">Detalle por persona</h3>
+    <p style="font-size:12px; color:var(--text-dim);">Desliza si no entra todo, y toma una captura de pantalla de esta lista para compartirla por WhatsApp (o cualquier app) — así se ve siempre nítido, sin depender de generar una imagen.</p>
+    <div id="detalleCompartirContenido" style="max-height:60vh; overflow-y:auto;"></div>
+    <button class="btn btn-sm btn-secondary" style="margin-top:12px;" onclick="compartirResumenCortoWhatsApp()">💬 Compartir solo el resumen corto (texto, sin captura)</button>
   </div>
 </div>
 
@@ -1834,8 +1855,9 @@ function renderDetalleCompra(){
       ? (p.DescuentoTipo === 'porcentaje' ? '-' + Number(p.DescuentoValor) + '%' : (Number(p.DescuentoValor) > 0 ? '-S/' + Number(p.DescuentoValor).toFixed(2) : 'Descuento'))
       : '';
     const fotoThumb = p.FotoURL ? '<img src="'+p.FotoURL+'" onclick="window.open(\''+p.FotoURL+'\',\'_blank\')" style="width:44px; height:44px; object-fit:cover; border-radius:8px; margin-right:10px; flex-shrink:0; cursor:pointer;">' : '';
+    const transporteTxt = esTrue(p.EsTransporte) ? ' <span class="desc-badge" style="background:rgba(96,165,250,.18); color:#3b82f6;">🚕 Transporte</span>' : '';
     return '<div class="producto-item">' +
-      '<div class="p-top">' + fotoThumb + '<div style="flex:1; min-width:0;"><div class="p-nombre">'+p.Producto+(descuentoTxt?'<span class="desc-badge">'+descuentoTxt+'</span>':'')+'</div>' +
+      '<div class="p-top">' + fotoThumb + '<div style="flex:1; min-width:0;"><div class="p-nombre">'+p.Producto+(descuentoTxt?'<span class="desc-badge">'+descuentoTxt+'</span>':'')+transporteTxt+'</div>' +
       '<div class="p-precio">'+Number(p.Cantidad)+' x '+precioDiff+' S/'+Number(p.PrecioReal).toFixed(2)+'</div></div>' +
       '<div class="p-monto">S/'+Number(p.MontoTotal).toFixed(2)+'</div></div>' +
       '<div class="division-tag'+(sinAsignar?' sin-asignar':'')+'">'+divisionTxt+'</div>' +
@@ -1884,135 +1906,96 @@ function renderResumenPersonasCompra(compra, productos){
     '<div class="mov-amount">S/'+resumen[n].total.toFixed(2)+'</div></div>'
   ).join('');
 }
-// Arma, por persona, la lista de productos que le tocan con su monto ya
-// calculado (prorrateado si el producto se comparte) — a diferencia de
-// resumenPorPersonaDeCompra (que solo da el total, para el panel dentro de
-// la app), esto guarda cada línea de producto para el detalle que se
-// comparte por WhatsApp.
-function detalleParaCompartir(compra, productos){
-  const detalle = {};
-  productos.forEach(p => {
-    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
-    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
-    const montoTotalProducto = Number(p.MontoTotal || 0);
-    const montoPersona = montoTotalProducto / miembros.length;
-    miembros.forEach(m => {
-      if (!detalle[m]) detalle[m] = { items: [], subtotal: 0 };
-      detalle[m].items.push({
-        producto: p.Producto, cantidad: Number(p.Cantidad), montoPersona: montoPersona,
-        montoTotalProducto: montoTotalProducto, compartido: miembros.length > 1, entreCuantos: miembros.length
-      });
-      detalle[m].subtotal += montoPersona;
-    });
-  });
-  return detalle;
-}
-function compartirCompraWhatsApp(){
+// Muestra el detalle completo (por persona, cada producto con su monto ya
+// calculado) como HTML normal dentro de un modal — nada de canvas, así que
+// no depende de medir texto a mano ni de cómo cada celular renderice
+// fuentes/emojis. El usuario toma captura de pantalla de esto para
+// compartirlo por donde quiera; siempre se ve nítido porque lo dibuja el
+// navegador, no un cálculo de píxeles nuestro.
+function abrirDetalleCompartir(){
   const compra = compraActual();
   const productos = productosDeCompraActual();
   if (!compra || !productos.length){ showToast('Agrega productos y asígnalos antes de compartir'); return; }
-  const detalle = detalleParaCompartir(compra, productos);
-  const nombres = Object.keys(detalle).sort((a,b) => detalle[b].subtotal - detalle[a].subtotal);
-  if (!nombres.length){ showToast('Nada asignado todavía'); return; }
-  const totalGeneral = nombres.reduce((s,n) => s+detalle[n].subtotal, 0);
+
+  // Columnas de la tabla: todas las personas que aparecen en ALGÚN producto
+  // de esta compra (no solo un resumen — cada producto es una fila).
+  const personasSet = {};
+  productos.forEach(p => {
+    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
+    miembros.forEach(m => { personasSet[m] = true; });
+  });
+  const personas = Object.keys(personasSet);
+  if (!personas.length){ showToast('Nada asignado todavía'); return; }
   const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
-  const cantTxt = c => (Number.isInteger(c) ? String(c) : c.toFixed(3));
 
-  // Texto para WhatsApp: CORTO a propósito — solo el total por persona.
-  // Con compras de 20-40 productos, listar cada uno en el texto haría el
-  // mensaje enorme e ilegible en el chat. El detalle producto por producto
-  // va solo en la IMAGEN (que se abre aparte, sin ensuciar la conversación).
-  let texto = '🛒 *' + compra.Nombre + '* — ' + fechaTxt + '\n\n';
-  nombres.forEach(n => { texto += '👤 ' + n + ': S/. ' + detalle[n].subtotal.toFixed(2) + '\n'; });
-  texto += '\nTotal: S/. ' + totalGeneral.toFixed(2) + '\n(detalle producto por producto en la imagen 📷)';
+  const totalesPorPersona = {}; personas.forEach(p => totalesPorPersona[p] = 0);
+  let totalGeneral = 0;
+  const tdBase = 'padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap;';
 
-  // Imagen tipo TABLA: columnas fijas de verdad (Producto | insignia ÷N si
-  // aplica | Monto) — todas alineadas en la misma posición en cada fila, en
-  // vez de texto de ancho variable pegado al nombre (eso se veía chueco con
-  // muchos productos). Se recorta el nombre con "…" si no cabe en su columna.
-  const canvas = document.getElementById('canvasExport');
-  const w = 680;
-  let h = 110;
-  nombres.forEach(n => { h += 50 + detalle[n].items.length * 28; });
-  h += 70;
-
-  // Se dibuja a mayor resolución interna que el tamaño lógico (w x h) para
-  // que no salga pixelado/borroso en celulares de pantalla de alta densidad
-  // (retina) — WhatsApp y cualquier visor muestran esta imagen más grande
-  // sin perder nitidez, en vez de estirar una imagen chica.
-  const escala = Math.max(2, window.devicePixelRatio || 1);
-  canvas.width = w * escala; canvas.height = h * escala;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(escala, escala);
-
-  function truncarTexto(texto, anchoMax){
-    if (ctx.measureText(texto).width <= anchoMax) return texto;
-    let recortado = texto;
-    while (recortado.length > 3 && ctx.measureText(recortado + '…').width > anchoMax) recortado = recortado.slice(0, -1);
-    return recortado + '…';
-  }
-
-  ctx.fillStyle = '#f2f3fa'; ctx.fillRect(0,0,w,h);
-  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('🛒 ' + compra.Nombre, 24, 42);
-  ctx.fillStyle = '#8b90a3'; ctx.font = '14px sans-serif'; ctx.fillText(fechaTxt, 24, 66);
-
-  const colMonto = w - 36;      // columna del monto, siempre a la derecha
-  const colInsignia = w - 96;   // columna fija para el "÷N", antes del monto
-  const anchoMaxNombre = colInsignia - 36 - 10; // lo que le queda al nombre sin chocar con la insignia
-
-  let y = 96;
-  nombres.forEach(n => {
-    ctx.fillStyle = colorPersona(n);
-    ctx.fillRect(24, y, w-48, 36);
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px sans-serif';
-    ctx.fillText(n, 36, y+24);
-    ctx.textAlign = 'right'; ctx.fillText('S/. '+detalle[n].subtotal.toFixed(2), w-36, y+24); ctx.textAlign = 'left';
-    y += 36;
-    detalle[n].items.forEach((it,i) => {
-      ctx.fillStyle = i%2===0 ? '#ffffff' : '#f7f8fc';
-      ctx.fillRect(24, y, w-48, 28);
-      ctx.strokeStyle = '#eef0f5'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(24, y+28); ctx.lineTo(w-24, y+28); ctx.stroke();
-
-      const cant = it.cantidad !== 1 ? cantTxt(it.cantidad) + 'x ' : '';
-      ctx.fillStyle = '#1e2433'; ctx.font = '13px sans-serif';
-      ctx.fillText(truncarTexto(cant + it.producto, anchoMaxNombre), 36, y+19);
-
-      if (it.compartido){
-        ctx.fillStyle = '#8b90a3'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText('÷'+it.entreCuantos, colInsignia, y+19); ctx.textAlign = 'left';
+  const filas = productos.map((p, i) => {
+    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
+    const montoTotal = Number(p.MontoTotal || 0);
+    const montoPorMiembro = montoTotal / miembros.length;
+    totalGeneral += montoTotal;
+    const fondo = i%2===0 ? 'var(--card)' : 'var(--card2)';
+    const celdasPersonas = personas.map(persona => {
+      if (miembros.indexOf(persona) !== -1) {
+        totalesPorPersona[persona] += montoPorMiembro;
+        return '<td style="'+tdBase+' text-align:right; background:'+fondo+';">S/'+montoPorMiembro.toFixed(2)+'</td>';
       }
+      return '<td style="'+tdBase+' text-align:center; color:var(--text-dim); background:'+fondo+';">-</td>';
+    }).join('');
+    const cant = Number(p.Cantidad);
+    const cantTxt = Number.isInteger(cant) ? String(cant) : cant.toFixed(3);
+    return '<tr>' +
+      '<td style="'+tdBase+' text-align:center; color:var(--text-dim); background:'+fondo+';">'+cantTxt+'</td>' +
+      '<td style="'+tdBase+' white-space:normal; background:'+fondo+';">'+String(p.Producto)+'</td>' +
+      '<td style="'+tdBase+' text-align:right; font-weight:700; background:'+fondo+';">S/'+montoTotal.toFixed(2)+'</td>' +
+      celdasPersonas + '</tr>';
+  }).join('');
 
-      ctx.fillStyle = '#0d9488'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText('S/. '+it.montoPersona.toFixed(2), colMonto, y+19); ctx.textAlign = 'left';
-      y += 28;
-    });
-    y += 14;
-  });
+  const thBase = 'padding:8px 10px; white-space:nowrap;';
+  const encabezado = '<tr style="background:var(--accent); color:var(--accent-ink);">' +
+    '<th style="'+thBase+'">Cant.</th><th style="'+thBase+' text-align:left;">Producto</th><th style="'+thBase+' text-align:right;">Final</th>' +
+    personas.map(p => '<th style="'+thBase+' text-align:right;">'+p+'</th>').join('') + '</tr>';
 
-  ctx.strokeStyle = '#c9ccd8'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(24,y); ctx.lineTo(w-24,y); ctx.stroke();
-  y += 34;
-  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 19px sans-serif'; ctx.textAlign = 'right';
-  ctx.fillText('Total: S/. '+totalGeneral.toFixed(2), w-36, y); ctx.textAlign = 'left';
+  const filaTotal = '<tr style="font-weight:800; background:var(--card2); border-top:2px solid var(--border);">' +
+    '<td colspan="2" style="padding:8px 10px; text-align:right;">TOTAL</td>' +
+    '<td style="padding:8px 10px; text-align:right;">S/'+totalGeneral.toFixed(2)+'</td>' +
+    personas.map(p => '<td style="padding:8px 10px; text-align:right; white-space:nowrap;">S/'+totalesPorPersona[p].toFixed(2)+'</td>').join('') +
+    '</tr>';
 
-  canvas.toBlob(blob => {
-    const nombreArchivo = 'division_' + (compra.Nombre||'compra').replace(/[^a-z0-9]+/gi,'_').toLowerCase() + '.png';
-    const archivo = new File([blob], nombreArchivo, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [archivo] })){
-      navigator.share({ files: [archivo], text: texto, title: compra.Nombre }).catch(() => { /* el usuario canceló, no pasa nada */ });
-      return;
-    }
-    // Sin soporte para compartir archivos: se descarga la imagen y se abre
-    // WhatsApp (sin número = deja elegir el chat/grupo destino) con el texto
-    // ya armado; el usuario adjunta la imagen descargada a mano.
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = nombreArchivo; a.click();
-    URL.revokeObjectURL(url);
-    showToast('Imagen descargada — se abrirá WhatsApp con el texto, adjunta la imagen ahí 📎');
-    setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank'), 700);
-  });
+  document.getElementById('detalleCompartirTitulo').textContent = '🛒 ' + compra.Nombre + ' — ' + fechaTxt;
+  document.getElementById('detalleCompartirContenido').innerHTML =
+    '<div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">' +
+    '<table style="border-collapse:collapse; font-size:12px; min-width:100%;">' +
+    '<thead>'+encabezado+'</thead><tbody>'+filas+filaTotal+'</tbody>' +
+    '</table></div>';
+
+  abrirModal('modalDetalleCompartir');
+}
+// Comparte solo el resumen corto (total por persona, sin listar cada
+// producto) directo como texto por WhatsApp — sin imagen, sin captura,
+// nunca falla por temas de renderizado.
+function compartirResumenCortoWhatsApp(){
+  const compra = compraActual();
+  const productos = productosDeCompraActual();
+  if (!compra || !productos.length) return;
+  const resumen = resumenPorPersonaDeCompra(compra, productos);
+  const nombres = Object.keys(resumen).sort((a,b) => resumen[b].total - resumen[a].total);
+  if (!nombres.length) return;
+  const totalGeneral = nombres.reduce((s,n) => s+resumen[n].total, 0);
+  const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+  let texto = '🛒 *' + compra.Nombre + '* — ' + fechaTxt + '\n\n';
+  nombres.forEach(n => { texto += '👤 ' + n + ': S/. ' + resumen[n].total.toFixed(2) + '\n'; });
+  texto += '\nTotal: S/. ' + totalGeneral.toFixed(2);
+  if (navigator.share){
+    navigator.share({ text: texto, title: compra.Nombre }).catch(() => { /* el usuario canceló, no pasa nada */ });
+  } else {
+    window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+  }
 }
 
 function toggleFormProducto(){
@@ -2028,6 +2011,9 @@ function toggleFormProducto(){
     document.getElementById('pDescuento').checked = false;
     document.getElementById('pDescuentoValor').value = '';
     document.getElementById('pFoto').value = '';
+    document.getElementById('pEsTransporte').checked = false;
+    document.getElementById('pVitrinaWrap').style.display = 'block';
+    document.getElementById('pDescuentoWrap').style.display = 'block';
     document.getElementById('pDescuentoCampos').style.display = 'none';
     document.querySelectorAll('#pDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo==='monto'));
     renderDivisionPicker('pDivisionPicker', '', []);
@@ -2038,6 +2024,17 @@ function toggleDescuentoCampos(prefix){
   const on = document.getElementById(prefix+'Descuento').checked;
   document.getElementById(prefix+'DescuentoCampos').style.display = on ? 'block' : 'none';
   if (on) recalcularPrecioDescuento(prefix);
+}
+// El transporte (taxi, pasaje) no tiene "precio de vitrina" ni descuento —
+// se ocultan esos campos cuando se marca la casilla, para no confundir.
+function toggleCamposTransporte(prefix){
+  const esTransporte = document.getElementById(prefix+'EsTransporte').checked;
+  document.getElementById(prefix+'VitrinaWrap').style.display = esTransporte ? 'none' : 'block';
+  document.getElementById(prefix+'DescuentoWrap').style.display = esTransporte ? 'none' : 'block';
+  if (esTransporte){
+    document.getElementById(prefix+'Descuento').checked = false;
+    document.getElementById(prefix+'DescuentoCampos').style.display = 'none';
+  }
 }
 function elegirTipoDescuento(prefix, tipo){
   const cont = document.getElementById(prefix+'DescuentoCampos');
@@ -2314,7 +2311,8 @@ function guardarProductoCompra(){
   postData('addProductoCompra', {
     compraId: compraSeleccionadaId, producto: nombre, cantidad, precioVitrina: vitrina, precioReal: real,
     tieneDescuento: descuento, tipoDivision: division.tipo, miembros: division.miembros,
-    descuentoTipo: descuento ? tipoDescuentoActivo('p') : '', descuentoValor: descuento ? (parseFloat(document.getElementById('pDescuentoValor').value)||0) : 0
+    descuentoTipo: descuento ? tipoDescuentoActivo('p') : '', descuentoValor: descuento ? (parseFloat(document.getElementById('pDescuentoValor').value)||0) : 0,
+    esTransporte: document.getElementById('pEsTransporte').checked
   }).then(res => {
     if (res.error) return;
     const terminar = () => {
@@ -2411,6 +2409,8 @@ function abrirEditarProducto(id){
   document.getElementById('epDescuentoValor').value = p.DescuentoValor || '';
   document.querySelectorAll('#epDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo === (p.DescuentoTipo || 'monto')));
   document.getElementById('epDescuentoCampos').style.display = esTrue(p.TieneDescuento) ? 'block' : 'none';
+  document.getElementById('epEsTransporte').checked = esTrue(p.EsTransporte);
+  toggleCamposTransporte('ep');
   document.getElementById('avisoWhatsappMover').innerHTML = '';
   let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
   renderDivisionPicker('epDivisionPicker', p.TipoDivision, miembros);
@@ -2439,6 +2439,7 @@ function guardarEdicionProducto(){
     data.tieneDescuento = document.getElementById('epDescuento').checked;
     data.descuentoTipo = data.tieneDescuento ? tipoDescuentoActivo('ep') : '';
     data.descuentoValor = data.tieneDescuento ? (parseFloat(document.getElementById('epDescuentoValor').value)||0) : 0;
+    data.esTransporte = document.getElementById('epEsTransporte').checked;
   }
   postData('updateProductoCompra', data).then(() => {
     showToast('Producto actualizado ✅');
@@ -2468,25 +2469,40 @@ function borrarProductoActual(){
 function abrirFinalizarCompra(){
   const productos = productosDeCompraActual();
   if (!productos.length){ showToast('Agrega al menos un producto'); return; }
+  const productosTransporte = productos.filter(p => esTrue(p.EsTransporte));
+  const productosNormales = productos.filter(p => !esTrue(p.EsTransporte));
   const sinAsignar = productos.filter(p => { try { return JSON.parse(p.Miembros||'[]').length===0; } catch(e){ return true; } });
-  const total = productos.reduce((s,p)=>s+Number(p.MontoTotal||0),0);
-  document.getElementById('finalizarResumen').textContent = productos.length + ' producto(s) · Total a pagar: S/' + total.toFixed(2) +
+  const totalNormal = productosNormales.reduce((s,p)=>s+Number(p.MontoTotal||0),0);
+  const totalTransporte = productosTransporte.reduce((s,p)=>s+Number(p.MontoTotal||0),0);
+  document.getElementById('finalizarResumen').textContent = productos.length + ' producto(s) · Súper: S/' + totalNormal.toFixed(2) +
+    (productosTransporte.length ? ' · 🚕 Transporte: S/' + totalTransporte.toFixed(2) : '') +
     (sinAsignar.length ? ' · ⚠️ ' + sinAsignar.length + ' sin asignar todavía (quedarán como tuyos)' : '');
   document.getElementById('finalizarFoto').value = '';
-  const metWrap = document.getElementById('finalizarMetodos'); metWrap.innerHTML = '';
-  getMetodos('Gasto').filter(m => m.indexOf('Pago a ')!==0).forEach((m,i) => {
-    const div = document.createElement('div');
-    div.className = 'chip' + (i===0?' active':'');
-    div.textContent = m;
-    div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); };
-    metWrap.appendChild(div);
-  });
+
+  const pintarMetodos = (contenedorId) => {
+    const metWrap = document.getElementById(contenedorId); metWrap.innerHTML = '';
+    getMetodos('Gasto').filter(m => m.indexOf('Pago a ')!==0).forEach((m,i) => {
+      const div = document.createElement('div');
+      div.className = 'chip' + (i===0?' active':'');
+      div.textContent = m;
+      div.onclick = () => { metWrap.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); div.classList.add('active'); };
+      metWrap.appendChild(div);
+    });
+  };
+  pintarMetodos('finalizarMetodos');
+  // El bloque de método de transporte solo se muestra si hay algo marcado
+  // como transporte en esta compra — así no molesta cuando no aplica.
+  document.getElementById('finalizarTransporteWrap').style.display = productosTransporte.length ? 'block' : 'none';
+  if (productosTransporte.length) pintarMetodos('finalizarMetodosTransporte');
+
   abrirModal('modalFinalizarCompra');
 }
 function confirmarFinalizarCompra(){
   const metodo = document.querySelector('#finalizarMetodos .chip.active')?.textContent || 'Efectivo';
+  const hayTransporte = document.getElementById('finalizarTransporteWrap').style.display !== 'none';
+  const metodoTransporte = hayTransporte ? (document.querySelector('#finalizarMetodosTransporte .chip.active')?.textContent || metodo) : undefined;
   const archivo = document.getElementById('finalizarFoto').files[0];
-  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, persona: MI_PERSONA }).then(res => {
+  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, metodoTransporte, persona: MI_PERSONA }).then(res => {
     if (!res.success) return;
     showToast('Compra finalizada ✅ Gasto de S/' + Number(res.total).toFixed(2) + ' registrado');
     cerrarModal('modalFinalizarCompra');
