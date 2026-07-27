@@ -1926,18 +1926,39 @@ function compartirCompraWhatsApp(){
   nombres.forEach(n => { texto += '👤 ' + n + ': S/. ' + detalle[n].subtotal.toFixed(2) + '\n'; });
   texto += '\nTotal: S/. ' + totalGeneral.toFixed(2) + '\n(detalle producto por producto en la imagen 📷)';
 
-  // Imagen tipo tabla detallada: un bloque por persona (encabezado con su
-  // subtotal) y debajo, una fila por cada producto que le toca.
+  // Imagen tipo TABLA: columnas fijas de verdad (Producto | insignia ÷N si
+  // aplica | Monto) — todas alineadas en la misma posición en cada fila, en
+  // vez de texto de ancho variable pegado al nombre (eso se veía chueco con
+  // muchos productos). Se recorta el nombre con "…" si no cabe en su columna.
   const canvas = document.getElementById('canvasExport');
   const w = 680;
   let h = 110;
-  nombres.forEach(n => { h += 50 + detalle[n].items.length * 30; });
+  nombres.forEach(n => { h += 50 + detalle[n].items.length * 28; });
   h += 70;
-  canvas.width = w; canvas.height = h;
+
+  // Se dibuja a mayor resolución interna que el tamaño lógico (w x h) para
+  // que no salga pixelado/borroso en celulares de pantalla de alta densidad
+  // (retina) — WhatsApp y cualquier visor muestran esta imagen más grande
+  // sin perder nitidez, en vez de estirar una imagen chica.
+  const escala = Math.max(2, window.devicePixelRatio || 1);
+  canvas.width = w * escala; canvas.height = h * escala;
   const ctx = canvas.getContext('2d');
+  ctx.scale(escala, escala);
+
+  function truncarTexto(texto, anchoMax){
+    if (ctx.measureText(texto).width <= anchoMax) return texto;
+    let recortado = texto;
+    while (recortado.length > 3 && ctx.measureText(recortado + '…').width > anchoMax) recortado = recortado.slice(0, -1);
+    return recortado + '…';
+  }
+
   ctx.fillStyle = '#f2f3fa'; ctx.fillRect(0,0,w,h);
   ctx.fillStyle = '#1e2433'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('🛒 ' + compra.Nombre, 24, 42);
   ctx.fillStyle = '#8b90a3'; ctx.font = '14px sans-serif'; ctx.fillText(fechaTxt, 24, 66);
+
+  const colMonto = w - 36;      // columna del monto, siempre a la derecha
+  const colInsignia = w - 96;   // columna fija para el "÷N", antes del monto
+  const anchoMaxNombre = colInsignia - 36 - 10; // lo que le queda al nombre sin chocar con la insignia
 
   let y = 96;
   nombres.forEach(n => {
@@ -1949,18 +1970,22 @@ function compartirCompraWhatsApp(){
     y += 36;
     detalle[n].items.forEach((it,i) => {
       ctx.fillStyle = i%2===0 ? '#ffffff' : '#f7f8fc';
-      ctx.fillRect(24, y, w-48, 30);
-      const cant = it.cantidad !== 1 ? cantTxt(it.cantidad) + ' x  ' : '';
+      ctx.fillRect(24, y, w-48, 28);
+      ctx.strokeStyle = '#eef0f5'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(24, y+28); ctx.lineTo(w-24, y+28); ctx.stroke();
+
+      const cant = it.cantidad !== 1 ? cantTxt(it.cantidad) + 'x ' : '';
       ctx.fillStyle = '#1e2433'; ctx.font = '13px sans-serif';
-      ctx.fillText(cant + it.producto, 36, y+20);
+      ctx.fillText(truncarTexto(cant + it.producto, anchoMaxNombre), 36, y+19);
+
       if (it.compartido){
-        const anchoNombre = ctx.measureText(cant + it.producto).width;
-        ctx.fillStyle = '#8b90a3'; ctx.font = '11px sans-serif';
-        ctx.fillText('  (÷'+it.entreCuantos+' de S/'+it.montoTotalProducto.toFixed(2)+')', 36+anchoNombre, y+20);
+        ctx.fillStyle = '#8b90a3'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('÷'+it.entreCuantos, colInsignia, y+19); ctx.textAlign = 'left';
       }
+
       ctx.fillStyle = '#0d9488'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText('S/. '+it.montoPersona.toFixed(2), w-36, y+20); ctx.textAlign = 'left';
-      y += 30;
+      ctx.fillText('S/. '+it.montoPersona.toFixed(2), colMonto, y+19); ctx.textAlign = 'left';
+      y += 28;
     });
     y += 14;
   });
