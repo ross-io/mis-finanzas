@@ -368,8 +368,8 @@
         <div id="formProductoWrap" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
           <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
           <div class="row-2">
-            <div class="field"><label>Cantidad</label><input type="number" id="pCantidad" value="1" min="0" step="0.01"></div>
-            <div class="field"><label>Precio en vitrina (S/)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
+            <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso"></div>
+            <div class="field"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
           </div>
           <div class="field">
             <label class="check"><input type="checkbox" id="pDescuento" onclick="toggleDescuentoCampos('p')"> Tiene descuento</label>
@@ -383,7 +383,8 @@
               </div>
             </div>
           </div>
-          <div class="field"><label>Precio real cobrado en caja (S/)</label><input type="number" id="pReal" step="0.01"></div>
+          <div class="field"><label>Precio real cobrado en caja (S/ x unidad o x kg)</label><input type="number" id="pReal" step="0.01"></div>
+          <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Para frutas/verduras u otros por peso: pon el peso en Cantidad (ej. 0.654 kg) y el precio POR KG en los campos de precio — la app multiplica sola.</p>
           <div class="field"><label>¿Cómo se divide?</label><div id="pDivisionPicker"></div></div>
           <button class="btn btn-primary" onclick="guardarProductoCompra()">Guardar producto</button>
         </div>
@@ -617,8 +618,8 @@
     <div id="editarProductoCamposPrecio">
       <div class="field"><label>Producto</label><input type="text" id="epNombre"></div>
       <div class="row-2">
-        <div class="field"><label>Cantidad</label><input type="number" id="epCantidad" step="0.01"></div>
-        <div class="field"><label>Precio vitrina (S/)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
+        <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01"></div>
+        <div class="field"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
       </div>
       <div class="field">
         <label class="check"><input type="checkbox" id="epDescuento" onclick="toggleDescuentoCampos('ep')"> Tiene descuento</label>
@@ -632,7 +633,7 @@
           </div>
         </div>
       </div>
-      <div class="field"><label>Precio real (S/)</label><input type="number" id="epReal" step="0.01"></div>
+      <div class="field"><label>Precio real (S/ x unidad o x kg)</label><input type="number" id="epReal" step="0.01"></div>
     </div>
     <div class="field"><label>¿Cómo se divide? (puedes moverlo cuando quieras)</label><div id="epDivisionPicker"></div></div>
     <button class="btn btn-primary" onclick="guardarEdicionProducto()">Guardar cambios</button>
@@ -659,11 +660,18 @@
     <span class="close-x" onclick="cerrarModal('modalRevisarEscaneo')">✕</span>
     <h3>Revisa lo que se detectó</h3>
     <p style="font-size:12px; color:var(--text-dim);">El escaneo no es perfecto — revisa nombres y precios antes de agregar. Destilda lo que no quieras agregar. Si falta algún producto de la boleta, agrégalo a mano abajo con "+ Agregar producto" después de cerrar este modal.</p>
+    <p style="font-size:12px; color:var(--text-dim);"><b>El precio es por UNIDAD</b> (no el total) — la app multiplica cantidad × precio unitario sola al guardar.</p>
     <button class="btn btn-sm btn-secondary" onclick="toggleTextoOCR()" id="btnToggleTextoOCR">👁️ Ver texto que leyó el OCR</button>
     <div id="textoOCRWrap" style="display:none; margin:10px 0;">
       <p style="font-size:11px; color:var(--text-dim);">Esto es lo que el OCR realmente leyó de la(s) foto(s). Si un producto no aparece aquí, la foto no se leyó bien en esa parte (súbela de nuevo, más enfocada). Si SÍ aparece aquí pero no en la lista de abajo, cópiame este texto para revisar el detector.</p>
       <textarea id="textoOCRContenido" readonly style="width:100%; height:160px; font-family:monospace; font-size:11px; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:8px;"></textarea>
       <button class="btn btn-sm btn-secondary" style="margin-top:6px;" onclick="copiarTextoOCR()">📋 Copiar texto</button>
+    </div>
+    <div class="split-row" style="font-size:11px; color:var(--text-dim); font-weight:700; margin-bottom:4px;">
+      <span style="flex:0; width:20px;"></span>
+      <span style="flex:2;">Producto</span>
+      <span style="flex:0.6;">Cant.</span>
+      <span style="flex:0.8;">Precio unit. S/</span>
     </div>
     <div id="listaCandidatosEscaneo"></div>
     <button class="btn btn-primary" style="margin-top:10px;" onclick="agregarCandidatosEscaneados()">Agregar seleccionados</button>
@@ -2058,13 +2066,31 @@ function escanearBoletaUI(imagenes){
 }
 function renderCandidatosEscaneo(){
   document.getElementById('listaCandidatosEscaneo').innerHTML = candidatosEscaneoActual.map((c,i) => {
-    const aviso = c.posibleDuplicado ? '<div style="font-size:11px; color:var(--warn); margin:6px 0 2px;">⚠️ Posible duplicado (por solape entre fotos) — desmarcado, revisa si de verdad compraste 2</div>' : '';
-    return aviso +
+    const avisoDup = c.posibleDuplicado ? '<div style="font-size:11px; color:var(--warn); margin:6px 0 2px;">⚠️ Posible duplicado (por solape entre fotos) — desmarcado, revisa si de verdad compraste 2</div>' : '';
+    const avisoRecordado = c.nombreCorregidoAutomaticamente ? '<div style="font-size:11px; color:var(--good); margin:6px 0 2px;">✅ Nombre recordado de una corrección anterior (la boleta decía "'+String(c.nombreOriginalOCR||'').replace(/"/g,'&quot;')+'")</div>' : '';
+    const botonRecordar = c.codigo ? '<button class="btn btn-sm btn-secondary" style="width:auto; padding:8px; flex:0;" onclick="recordarNombreProducto('+i+')" title="Recordar este nombre para la próxima vez que aparezca este producto">💾</button>' : '';
+    return avisoDup + avisoRecordado +
       '<div class="split-row"><label class="check" style="flex:0;"><input type="checkbox" id="cand'+i+'chk"'+(c.posibleDuplicado?'':' checked')+'></label>' +
       '<input type="text" id="cand'+i+'nombre" value="'+String(c.producto||'').replace(/"/g,'&quot;')+'" style="flex:2;" placeholder="Producto">' +
       '<input type="number" id="cand'+i+'cantidad" value="'+(c.cantidad||1)+'" step="0.01" style="flex:0.6;" title="Cantidad">' +
-      '<input type="number" id="cand'+i+'precio" value="'+Number(c.precio||0).toFixed(2)+'" step="0.01" style="flex:0.8;" title="Precio unitario"></div>';
+      '<input type="number" id="cand'+i+'precio" value="'+Number(c.precio||0).toFixed(2)+'" step="0.01" style="flex:0.8;" title="Precio unitario">' +
+      botonRecordar + '</div>';
   }).join('');
+}
+// Guarda (o corrige) el nombre real de un producto en el diccionario de la
+// familia, usando su código detectado como clave. De ahí en adelante,
+// cualquier escaneo (de cualquier miembro de la familia) que vuelva a ver
+// ese mismo código sale automáticamente con el nombre corregido — no hace
+// falta corregirlo de nuevo cada vez que se compra lo mismo.
+function recordarNombreProducto(i){
+  const c = candidatosEscaneoActual[i];
+  if (!c || !c.codigo){ showToast('Este producto no tiene código detectado, no se puede recordar'); return; }
+  const nombreActual = document.getElementById('cand'+i+'nombre').value.trim();
+  if (!nombreActual){ showToast('Escribe el nombre correcto antes de recordarlo'); return; }
+  postData('guardarNombreProducto', { codigo: c.codigo, nombreReal: nombreActual }).then(res => {
+    if (res.error) return;
+    showToast('✅ Nombre recordado — la próxima vez que aparezca este producto saldrá así solo');
+  });
 }
 // Agrega los productos marcados UNO POR UNO (esperando a que cada uno
 // termine antes de mandar el siguiente). Antes se mandaban todos a la vez,
