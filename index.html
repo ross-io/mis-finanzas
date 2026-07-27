@@ -690,10 +690,11 @@
   <div class="modal">
     <span class="close-x" onclick="cerrarModal('modalDetalleCompartir')">✕</span>
     <h3 id="detalleCompartirTitulo">Detalle por persona</h3>
-    <p style="font-size:12px; color:var(--text-dim);">Desliza si no entra todo. Puedes enviarla directo, o si tu celular no lo soporta, tomar una captura de pantalla de esta lista.</p>
+    <p style="font-size:12px; color:var(--text-dim);">Elige cómo compartirla abajo. El <b>link</b> muestra esta misma tabla completa (matriz con todas las personas); la <b>tabla de texto</b> va dentro del chat con columnas alineadas, pero compacta y separada por persona.</p>
     <div id="detalleCompartirContenido" style="max-height:60vh; overflow-y:auto;"></div>
-    <button class="btn btn-sm btn-whatsapp" style="margin-top:12px;" id="btnEnviarTablaImagen" onclick="enviarTablaComoImagen()">📤 Enviar tabla por WhatsApp</button>
-    <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="compartirResumenCortoWhatsApp()">💬 Compartir solo el resumen corto (texto, sin imagen)</button>
+    <button class="btn btn-sm btn-whatsapp" style="margin-top:12px;" id="btnEnlaceCompartir" onclick="compartirEnlaceTabla()">🔗 Enviar link a esta tabla (se ve completa)</button>
+    <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="enviarTablaMonoespaciada()">📊 Enviar como tabla de texto (por persona)</button>
+    <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="compartirResumenCortoWhatsApp()">💬 Solo totales por persona</button>
   </div>
 </div>
 
@@ -1977,73 +1978,80 @@ function abrirDetalleCompartir(){
 
   abrirModal('modalDetalleCompartir');
 }
-// Convierte un elemento HTML ya renderizado (la tabla que se ve en pantalla,
-// tal cual) en una imagen PNG, usando el propio motor de HTML/CSS del
-// navegador para el texto y el layout — así se evita el error de dibujar
-// texto a mano en un <canvas> (medir anchos, alinear columnas, símbolos que
-// se ven distinto según el celular), que es lo que salía mal antes. Como
-// dentro de un SVG las variables de color (var(--accent), etc.) no se
-// heredan solas, se copian sus valores REALES actuales (según el tema
-// claro/oscuro activo) justo antes de generar la imagen.
-function generarImagenDeElemento(elementoId){
-  return new Promise((resolve, reject) => {
-    try {
-      const original = document.getElementById(elementoId);
-      const ancho = Math.max(original.scrollWidth, original.offsetWidth) + 32;
-      const alto = Math.max(original.scrollHeight, original.offsetHeight) + 32;
-      const estilo = getComputedStyle(document.body);
-      const variables = ['--bg','--card','--card2','--accent','--accent-ink','--good','--warn','--danger','--text','--text-dim','--border'];
-      const declaraciones = variables.map(v => v+':'+estilo.getPropertyValue(v).trim()+';').join('');
-      const fondo = estilo.getPropertyValue('--card').trim() || '#ffffff';
+// Manda el detalle como TABLA DE TEXTO usando el formato monoespaciado de
+// WhatsApp (bloque entre ```): dentro de ese bloque WhatsApp usa una fuente
+// de ancho fijo, así que las columnas quedan REALMENTE alineadas, no como
+// una lista de viñetas suelta.
+// Límite honesto: en el celular solo caben ~26 caracteres de ancho antes de
+// que WhatsApp corte la línea y rompa la alineación — por eso NO cabe la
+// matriz completa (producto × 5 personas) y se arma una tabla compacta por
+// persona. Para la matriz completa está el botón del link.
+function enviarTablaMonoespaciada(){
+  const compra = compraActual();
+  const productos = productosDeCompraActual();
+  if (!compra || !productos.length){ showToast('Agrega productos y asígnalos antes de compartir'); return; }
 
-      const contenidoHtml = '<div xmlns="http://www.w3.org/1999/xhtml" style="'+declaraciones+' background:'+fondo+'; padding:16px; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif; color:'+estilo.getPropertyValue('--text').trim()+'; width:'+(ancho-32)+'px;">' + original.outerHTML + '</div>';
-      const svgData = '<svg xmlns="http://www.w3.org/2000/svg" width="'+ancho+'" height="'+alto+'"><foreignObject width="100%" height="100%">' + contenidoHtml + '</foreignObject></svg>';
-      const url = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
-      const img = new Image();
-      img.onload = () => {
-        const escala = Math.max(2, window.devicePixelRatio || 1);
-        const canvas = document.createElement('canvas');
-        canvas.width = ancho * escala; canvas.height = alto * escala;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(escala, escala);
-        ctx.fillStyle = fondo; ctx.fillRect(0, 0, ancho, alto);
-        ctx.drawImage(img, 0, 0, ancho, alto);
-        URL.revokeObjectURL(url);
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('El navegador no devolvió una imagen')), 'image/png');
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Este navegador no soporta generar la imagen automáticamente')); };
-      img.src = url;
-    } catch (err) { reject(err); }
+  const detalle = {};
+  productos.forEach(p => {
+    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
+    const montoPersona = Number(p.MontoTotal || 0) / miembros.length;
+    miembros.forEach(m => {
+      if (!detalle[m]) detalle[m] = { items: [], subtotal: 0 };
+      detalle[m].items.push({ producto: p.Producto, cantidad: Number(p.Cantidad), monto: montoPersona, compartido: miembros.length > 1 });
+      detalle[m].subtotal += montoPersona;
+    });
   });
+  const nombres = Object.keys(detalle).sort((a,b) => detalle[b].subtotal - detalle[a].subtotal);
+  if (!nombres.length){ showToast('Nada asignado todavía'); return; }
+  const totalGeneral = nombres.reduce((s,n) => s+detalle[n].subtotal, 0);
+  const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const ANCHO_NOMBRE = 17; // deja ~9 para el monto: total ~26, el máximo seguro en celular
+  const cortar = (txt, n) => { const t = String(txt); return t.length <= n ? t.padEnd(n) : t.slice(0, n-1) + '.'; };
+  const derecha = (txt, n) => String(txt).padStart(n);
+
+  let texto = '🛒 *' + compra.Nombre + '* · ' + fechaTxt + '\n';
+  nombres.forEach(n => {
+    texto += '\n```\n' + cortar(n.toUpperCase(), ANCHO_NOMBRE) + derecha(detalle[n].subtotal.toFixed(2), 8) + '\n';
+    texto += '-'.repeat(ANCHO_NOMBRE + 8) + '\n';
+    detalle[n].items.forEach(it => {
+      const cant = it.cantidad !== 1 ? (Number.isInteger(it.cantidad) ? it.cantidad+'x ' : it.cantidad.toFixed(2)+'k ') : '';
+      const etiqueta = cant + it.producto + (it.compartido ? ' /2+' : '');
+      texto += cortar(etiqueta, ANCHO_NOMBRE) + derecha(it.monto.toFixed(2), 8) + '\n';
+    });
+    texto += '```';
+  });
+  texto += '\n\n*TOTAL: S/ ' + totalGeneral.toFixed(2) + '*';
+
+  if (navigator.share){
+    navigator.share({ text: texto, title: compra.Nombre }).catch(() => { /* el usuario canceló, no pasa nada */ });
+  } else {
+    window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+  }
 }
-// Genera la imagen de la tabla y la manda directo al selector de compartir
-// del celular (WhatsApp, etc.) — sin pedir captura de pantalla. Si algo
-// falla (navegador viejo, o el modo del celular no lo soporta), avisa con
-// claridad y sugiere la captura de pantalla como respaldo, sin romper nada.
-function enviarTablaComoImagen(){
-  const boton = document.getElementById('btnEnviarTablaImagen');
+// Pide al backend un link público de solo lectura a la tabla COMPLETA de
+// esta compra (matriz productos × personas, tal cual se ve en la app) y lo
+// comparte. Es la única forma de mandar la tabla entera sin que se rompa:
+// quien abre el link ve una página web real, no texto cortado por el ancho
+// del chat. El link no lleva la clave secreta de la familia — usa un ID
+// aleatorio propio de esa compra, y solo muestra esa compra.
+function compartirEnlaceTabla(){
+  const compra = compraActual();
+  if (!compra){ return; }
+  const boton = document.getElementById('btnEnlaceCompartir');
   const textoOriginal = boton.textContent;
-  boton.disabled = true; boton.textContent = 'Generando imagen…';
-  generarImagenDeElemento('detalleCompartirContenido').then(blob => {
+  boton.disabled = true; boton.textContent = 'Generando link…';
+  postData('crearEnlaceCompartir', { compraId: compraSeleccionadaId }).then(res => {
     boton.disabled = false; boton.textContent = textoOriginal;
-    const compra = compraActual();
-    const nombreArchivo = 'division_' + (compra && compra.Nombre ? compra.Nombre.replace(/[^a-z0-9]+/gi,'_').toLowerCase() : 'compra') + '.png';
-    const archivo = new File([blob], nombreArchivo, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [archivo] })){
-      navigator.share({ files: [archivo], title: (compra && compra.Nombre) || 'División de la compra' }).catch(() => { /* el usuario canceló, no pasa nada */ });
-      return;
+    if (res.error || !res.url) return;
+    const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const texto = '🛒 *' + compra.Nombre + '* · ' + fechaTxt + '\nMira acá la tabla con lo que le toca a cada uno:\n' + res.url;
+    if (navigator.share){
+      navigator.share({ text: texto, title: compra.Nombre }).catch(() => { /* el usuario canceló, no pasa nada */ });
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
     }
-    // Sin soporte para compartir archivos directamente: se descarga la
-    // imagen y se abre WhatsApp (sin número = deja elegir el chat/grupo
-    // destino); el usuario adjunta la imagen descargada a mano.
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = nombreArchivo; a.click();
-    URL.revokeObjectURL(url);
-    showToast('Imagen descargada — ábrela desde tus archivos/galería para adjuntarla en WhatsApp 📎');
-  }).catch(err => {
-    boton.disabled = false; boton.textContent = textoOriginal;
-    showToast('No se pudo generar la imagen en este navegador — toma una captura de pantalla como respaldo');
   });
 }
 // Comparte solo el resumen corto (total por persona, sin listar cada
