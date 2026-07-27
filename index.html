@@ -349,9 +349,16 @@
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
         <button class="btn btn-sm btn-whatsapp" style="width:auto; margin-bottom:14px;" onclick="compartirCompraWhatsApp()">📲 Compartir división por WhatsApp</button>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
-        <button class="btn btn-secondary" id="btnEscanearBoleta" onclick="document.getElementById('inputEscanearBoleta').click()" style="margin-bottom:4px;">📷 Escanear boleta y sugerir productos</button>
-        <p style="font-size:11px; color:var(--text-dim); margin:0 0 12px;">Boleta larga: puedes elegir varias fotos a la vez (en orden) y se leen todas juntas.</p>
-        <input type="file" id="inputEscanearBoleta" accept="image/*" multiple style="display:none;" onchange="escanearBoletaUI(this.files)">
+        <div id="escanearBoletaCompraWrap">
+          <div class="row-2" style="margin-bottom:4px;">
+            <button class="btn btn-secondary" onclick="document.getElementById('inputFotoCompraCamara').click()">📷 Tomar foto</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('inputFotoCompraGaleria').click()">🖼️ Subir fotos</button>
+          </div>
+          <p style="font-size:11px; color:var(--text-dim); margin:0 0 12px;">Boleta larga: toma varias fotos seguidas o sube varias de la galería — se acumulan abajo y se leen todas juntas al escanear.</p>
+          <input type="file" id="inputFotoCompraCamara" accept="image/*" capture="environment" style="display:none;" onchange="agregarFotosBoletaUI('compra', this.files); this.value='';">
+          <input type="file" id="inputFotoCompraGaleria" accept="image/*" multiple style="display:none;" onchange="agregarFotosBoletaUI('compra', this.files); this.value='';">
+          <div id="fotosCompraPendientesWrap" style="display:none; margin-bottom:12px;"></div>
+        </div>
         <div id="listaProductosCompra"></div>
         <div id="avisoCerrada" style="display:none; font-size:12px; color:var(--text-dim); margin:10px 0;">
           Esta compra ya fue finalizada. Aún puedes reasignar a quién le toca cada producto (el gasto se ajusta solo si cambias precios).
@@ -432,8 +439,13 @@
         <div class="chip" data-tipo="Ahorro" onclick="setTipo('Ahorro')">Ahorro</div>
       </div>
       <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota(); actualizarResumenCompartir('f');">
-      <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('inputEscanearRegistro').click()">📷 Escanear boleta o recibo (llenar monto)</button>
-      <input type="file" id="inputEscanearRegistro" accept="image/*" multiple style="display:none;" onchange="escanearBoletaRegistrarUI(this.files)">
+      <div class="row-2" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('inputFotoRegistrarCamara').click()">📷 Tomar foto</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('inputFotoRegistrarGaleria').click()">🖼️ Subir fotos</button>
+      </div>
+      <input type="file" id="inputFotoRegistrarCamara" accept="image/*" capture="environment" style="display:none;" onchange="agregarFotosBoletaUI('registrar', this.files); this.value='';">
+      <input type="file" id="inputFotoRegistrarGaleria" accept="image/*" multiple style="display:none;" onchange="agregarFotosBoletaUI('registrar', this.files); this.value='';">
+      <div id="fotosRegistrarPendientesWrap" style="display:none; margin-top:8px;"></div>
       <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
       <div class="field" id="fMetodoWrap"><label>Método</label><div class="chip-row" id="fMetodos"></div></div>
       <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
@@ -1534,6 +1546,9 @@ function guardarMovimiento(){
     toggleCuotas();
     document.getElementById('asesorResultado').innerHTML = '';
     document.getElementById('asesorTexto').value = '';
+    limpiarFotosBoletaPendientes('registrar');
+    document.getElementById('comandoVozTexto').textContent = '';
+    document.getElementById('comandoVozManual').value = '';
     cargarDatos();
     irA('inicio');
   });
@@ -1734,8 +1749,8 @@ function confirmarNuevaCompra(){
     cargarDatosYAbrirCompra(res.id);
   });
 }
-function abrirDetalleCompra(id){ compraSeleccionadaId = id; document.getElementById('formProductoWrap').style.display = 'none'; renderCompras(); }
-function cerrarDetalleCompra(){ compraSeleccionadaId = null; renderCompras(); }
+function abrirDetalleCompra(id){ compraSeleccionadaId = id; document.getElementById('formProductoWrap').style.display = 'none'; limpiarFotosBoletaPendientes('compra'); renderCompras(); }
+function cerrarDetalleCompra(){ compraSeleccionadaId = null; limpiarFotosBoletaPendientes('compra'); renderCompras(); }
 function compraActual(){ return state.compras.find(c => c.ID === compraSeleccionadaId); }
 function productosDeCompraActual(){ return state.productosCompra.filter(p => p.CompraID === compraSeleccionadaId); }
 
@@ -1758,7 +1773,7 @@ function renderDetalleCompra(){
   const cerrada = compra.Estado === 'Cerrada';
   document.getElementById('avisoCerrada').style.display = cerrada ? 'block' : 'none';
   document.getElementById('btnAbrirFormProducto').style.display = cerrada ? 'none' : 'block';
-  document.getElementById('btnEscanearBoleta').style.display = cerrada ? 'none' : 'block';
+  document.getElementById('escanearBoletaCompraWrap').style.display = cerrada ? 'none' : 'block';
   document.getElementById('btnFinalizarCompra').style.display = cerrada ? 'none' : 'block';
 
   const wrap = document.getElementById('listaProductosCompra');
@@ -1919,64 +1934,101 @@ function extraerTotalSugerido(texto){
   });
   return preferido !== null ? preferido : cualquiera;
 }
-// Convierte un FileList (una o varias fotos) a [{base64, mime}, ...] en el
-// mismo orden en que el usuario las eligió — así una boleta larga que no
-// entra en una sola foto se manda completa y en orden.
-function archivosABase64(fileList){
-  return Promise.all([...fileList].map(archivo => new Promise((resolve, reject) => {
+// ---------- FOTOS PENDIENTES PARA ESCANEAR (cámara + galería, mezclables) ----------
+// Guarda las fotos que el usuario va tomando con la cámara y/o subiendo de la
+// galería ANTES de escanear, para poder combinar varias tomas en un solo
+// lote (útil para boletas largas, o para un recibo de servicio a 2 páginas).
+// Nada se envía al servidor hasta presionar "Escanear N foto(s)". Se separa
+// por contexto ('compra' vs 'registrar') para no mezclar fotos de una
+// pantalla con la otra.
+const fotosBoletaPendientes = { compra: [], registrar: [] };
+function agregarFotosBoletaUI(contexto, fileList){
+  if (!fileList || !fileList.length) return;
+  [...fileList].forEach(archivo => {
     const reader = new FileReader();
-    reader.onload = () => resolve({ base64: reader.result.split(',')[1], mime: archivo.type });
-    reader.onerror = reject;
+    reader.onload = () => {
+      fotosBoletaPendientes[contexto].push({ base64: reader.result.split(',')[1], mime: archivo.type, previewUrl: reader.result });
+      renderFotosBoletaPendientes(contexto);
+    };
     reader.readAsDataURL(archivo);
-  })));
-}
-function escanearBoletaRegistrarUI(files){
-  if (!files || !files.length) return;
-  showToast('Leyendo ' + (files.length>1 ? files.length+' fotos…' : 'la boleta…'));
-  archivosABase64(files).then(imagenes => {
-    postData('escanearBoleta', { imagenes }).then(res => {
-      if (res.error){ alert('No se pudo escanear:\n\n' + res.error); return; }
-      const total = res.totalDetectado || extraerTotalSugerido(res.texto || '');
-      const primeraLinea = (res.texto || '').split('\n').map(l => l.trim()).filter(l => l)[0] || '';
-      if (total){
-        document.getElementById('fMonto').value = Number(total).toFixed(2);
-        previsualizarCuota();
-      }
-      if (res.proveedor) document.getElementById('fDescripcion').value = res.proveedor;
-      else if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
-      if (res.fechaDetectada) document.getElementById('fFecha').value = res.fechaDetectada;
-      const tipoTxt = res.tipoDocumento === 'recibo_servicio' ? 'recibo de servicio' : 'boleta';
-      showToast(total ? ('Detecté '+tipoTxt+': S/'+Number(total).toFixed(2)+(res.fechaDetectada?' ('+res.fechaDetectada+')':'')+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
-    });
   });
 }
-function escanearBoletaUI(files){
-  if (!files || !files.length) return;
-  showToast('Leyendo ' + (files.length>1 ? files.length+' fotos…' : 'la boleta…') + ' puede tardar unos segundos');
-  archivosABase64(files).then(imagenes => {
-    postData('escanearBoleta', { imagenes }).then(res => {
-      if (res.error){
-        alert('No se pudo escanear la boleta:\n\n' + res.error);
-        return;
-      }
-      if (res.tipoDocumento === 'recibo_servicio'){
-        alert('Esto parece un recibo de servicio (luz, agua, internet), no una lista de productos. Para esto usa la pestaña "Registrar" en vez de una Compra de supermercado — ahí el escaneo te llena directo el monto y la fecha de vencimiento.');
-        return;
-      }
-      candidatosEscaneoActual = res.candidatos || [];
-      if (res.fechaDetectada){
-        const compra = compraActual();
-        const fechaCompraActual = compra ? new Date(compra.Fecha).toISOString().slice(0,10) : null;
-        if (fechaCompraActual && fechaCompraActual !== res.fechaDetectada){
-          if (confirm('La boleta parece ser del '+res.fechaDetectada+', pero esta compra está fechada '+fechaCompraActual+'. ¿Actualizar la fecha de la compra al '+res.fechaDetectada+'?')){
-            postData('updateCompra', { id: compraSeleccionadaId, fecha: new Date(res.fechaDetectada+'T12:00:00').toISOString() });
-          }
+function quitarFotoBoletaPendiente(contexto, idx){
+  fotosBoletaPendientes[contexto].splice(idx, 1);
+  renderFotosBoletaPendientes(contexto);
+}
+function limpiarFotosBoletaPendientes(contexto){
+  fotosBoletaPendientes[contexto] = [];
+  const wrap = document.getElementById(contexto === 'compra' ? 'fotosCompraPendientesWrap' : 'fotosRegistrarPendientesWrap');
+  if (wrap){ wrap.style.display = 'none'; wrap.innerHTML = ''; }
+}
+function renderFotosBoletaPendientes(contexto){
+  const wrap = document.getElementById(contexto === 'compra' ? 'fotosCompraPendientesWrap' : 'fotosRegistrarPendientesWrap');
+  const fotos = fotosBoletaPendientes[contexto];
+  if (!fotos.length){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  wrap.innerHTML =
+    '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">' +
+    fotos.map((f,i) => '<div style="position:relative;"><img src="'+f.previewUrl+'" style="width:56px; height:56px; object-fit:cover; border-radius:8px; border:1px solid var(--border);">' +
+      '<span onclick="quitarFotoBoletaPendiente(\''+contexto+'\','+i+')" style="position:absolute; top:-6px; right:-6px; background:var(--danger); color:#fff; width:18px; height:18px; border-radius:50%; font-size:11px; display:flex; align-items:center; justify-content:center; cursor:pointer;">✕</span></div>').join('') +
+    '</div>' +
+    '<div class="row-2">' +
+    '<button class="btn btn-sm btn-primary" style="width:auto;" onclick="escanearFotosPendientes(\''+contexto+'\')">🔎 Escanear '+fotos.length+' foto(s)</button>' +
+    '<button class="btn btn-sm btn-secondary" style="width:auto;" onclick="limpiarFotosBoletaPendientes(\''+contexto+'\')">Quitar todas</button>' +
+    '</div>';
+}
+function escanearFotosPendientes(contexto){
+  const fotos = fotosBoletaPendientes[contexto];
+  if (!fotos.length) return;
+  const imagenes = fotos.map(f => ({ base64: f.base64, mime: f.mime }));
+  if (contexto === 'compra') escanearBoletaUI(imagenes);
+  else escanearBoletaRegistrarUI(imagenes);
+}
+function escanearBoletaRegistrarUI(imagenes){
+  if (!imagenes || !imagenes.length) return;
+  showToast('Leyendo ' + (imagenes.length>1 ? imagenes.length+' fotos…' : 'la boleta…'));
+  postData('escanearBoleta', { imagenes }).then(res => {
+    if (res.error){ alert('No se pudo escanear:\n\n' + res.error); return; }
+    limpiarFotosBoletaPendientes('registrar');
+    const total = res.totalDetectado || extraerTotalSugerido(res.texto || '');
+    const primeraLinea = (res.texto || '').split('\n').map(l => l.trim()).filter(l => l)[0] || '';
+    if (total){
+      document.getElementById('fMonto').value = Number(total).toFixed(2);
+      previsualizarCuota();
+    }
+    if (res.proveedor) document.getElementById('fDescripcion').value = res.proveedor;
+    else if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
+    if (res.fechaDetectada) document.getElementById('fFecha').value = res.fechaDetectada;
+    const tipoTxt = res.tipoDocumento === 'recibo_servicio' ? 'recibo de servicio' : 'boleta';
+    showToast(total ? ('Detecté '+tipoTxt+': S/'+Number(total).toFixed(2)+(res.fechaDetectada?' ('+res.fechaDetectada+')':'')+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
+  });
+}
+function escanearBoletaUI(imagenes){
+  if (!imagenes || !imagenes.length) return;
+  showToast('Leyendo ' + (imagenes.length>1 ? imagenes.length+' fotos…' : 'la boleta…') + ' puede tardar unos segundos');
+  postData('escanearBoleta', { imagenes }).then(res => {
+    if (res.error){
+      alert('No se pudo escanear la boleta:\n\n' + res.error);
+      return;
+    }
+    limpiarFotosBoletaPendientes('compra');
+    if (res.tipoDocumento === 'recibo_servicio'){
+      alert('Esto parece un recibo de servicio (luz, agua, internet), no una lista de productos. Para esto usa la pestaña "Registrar" en vez de una Compra de supermercado — ahí el escaneo te llena directo el monto y la fecha de vencimiento.');
+      return;
+    }
+    candidatosEscaneoActual = res.candidatos || [];
+    if (res.fechaDetectada){
+      const compra = compraActual();
+      const fechaCompraActual = compra ? new Date(compra.Fecha).toISOString().slice(0,10) : null;
+      if (fechaCompraActual && fechaCompraActual !== res.fechaDetectada){
+        if (confirm('La boleta parece ser del '+res.fechaDetectada+', pero esta compra está fechada '+fechaCompraActual+'. ¿Actualizar la fecha de la compra al '+res.fechaDetectada+'?')){
+          postData('updateCompra', { id: compraSeleccionadaId, fecha: new Date(res.fechaDetectada+'T12:00:00').toISOString() });
         }
       }
-      if (!candidatosEscaneoActual.length){ showToast('No se detectaron productos — puedes agregarlos a mano'); return; }
-      renderCandidatosEscaneo();
-      abrirModal('modalRevisarEscaneo');
-    });
+    }
+    if (!candidatosEscaneoActual.length){ showToast('No se detectaron productos — puedes agregarlos a mano'); return; }
+    renderCandidatosEscaneo();
+    abrirModal('modalRevisarEscaneo');
   });
 }
 function renderCandidatosEscaneo(){
