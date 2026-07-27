@@ -1884,38 +1884,92 @@ function renderResumenPersonasCompra(compra, productos){
     '<div class="mov-amount">S/'+resumen[n].total.toFixed(2)+'</div></div>'
   ).join('');
 }
+// Arma, por persona, la lista de productos que le tocan con su monto ya
+// calculado (prorrateado si el producto se comparte) — a diferencia de
+// resumenPorPersonaDeCompra (que solo da el total, para el panel dentro de
+// la app), esto guarda cada línea de producto para el detalle que se
+// comparte por WhatsApp.
+function detalleParaCompartir(compra, productos){
+  const detalle = {};
+  productos.forEach(p => {
+    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar'];
+    const montoTotalProducto = Number(p.MontoTotal || 0);
+    const montoPersona = montoTotalProducto / miembros.length;
+    miembros.forEach(m => {
+      if (!detalle[m]) detalle[m] = { items: [], subtotal: 0 };
+      detalle[m].items.push({
+        producto: p.Producto, cantidad: Number(p.Cantidad), montoPersona: montoPersona,
+        montoTotalProducto: montoTotalProducto, compartido: miembros.length > 1, entreCuantos: miembros.length
+      });
+      detalle[m].subtotal += montoPersona;
+    });
+  });
+  return detalle;
+}
 function compartirCompraWhatsApp(){
   const compra = compraActual();
   const productos = productosDeCompraActual();
   if (!compra || !productos.length){ showToast('Agrega productos y asígnalos antes de compartir'); return; }
-  const resumen = resumenPorPersonaDeCompra(compra, productos);
-  const nombres = Object.keys(resumen).sort((a,b) => resumen[b].total-resumen[a].total);
+  const detalle = detalleParaCompartir(compra, productos);
+  const nombres = Object.keys(detalle).sort((a,b) => detalle[b].subtotal - detalle[a].subtotal);
   if (!nombres.length){ showToast('Nada asignado todavía'); return; }
-  const totalGeneral = nombres.reduce((s,n) => s+resumen[n].total, 0);
+  const totalGeneral = nombres.reduce((s,n) => s+detalle[n].subtotal, 0);
   const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+  const cantTxt = c => (Number.isInteger(c) ? String(c) : c.toFixed(3));
 
+  // Texto para WhatsApp: CORTO a propósito — solo el total por persona.
+  // Con compras de 20-40 productos, listar cada uno en el texto haría el
+  // mensaje enorme e ilegible en el chat. El detalle producto por producto
+  // va solo en la IMAGEN (que se abre aparte, sin ensuciar la conversación).
   let texto = '🛒 *' + compra.Nombre + '* — ' + fechaTxt + '\n\n';
-  nombres.forEach(n => { texto += n + ': S/. ' + resumen[n].total.toFixed(2) + '\n'; });
-  texto += '\nTotal: S/. ' + totalGeneral.toFixed(2);
+  nombres.forEach(n => { texto += '👤 ' + n + ': S/. ' + detalle[n].subtotal.toFixed(2) + '\n'; });
+  texto += '\nTotal: S/. ' + totalGeneral.toFixed(2) + '\n(detalle producto por producto en la imagen 📷)';
 
+  // Imagen tipo tabla detallada: un bloque por persona (encabezado con su
+  // subtotal) y debajo, una fila por cada producto que le toca.
   const canvas = document.getElementById('canvasExport');
-  const w = 600, h = 130 + nombres.length*50 + 60;
+  const w = 680;
+  let h = 110;
+  nombres.forEach(n => { h += 50 + detalle[n].items.length * 30; });
+  h += 70;
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#f2f3fa'; ctx.fillRect(0,0,w,h);
-  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('🛒 ' + compra.Nombre, 24, 42);
-  ctx.fillStyle = '#8b90a3'; ctx.font = '13px sans-serif'; ctx.fillText(fechaTxt, 24, 64);
-  let y = 92;
+  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('🛒 ' + compra.Nombre, 24, 42);
+  ctx.fillStyle = '#8b90a3'; ctx.font = '14px sans-serif'; ctx.fillText(fechaTxt, 24, 66);
+
+  let y = 96;
   nombres.forEach(n => {
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(24, y, w-48, 42);
-    ctx.strokeStyle = '#eaebf3'; ctx.lineWidth = 1; ctx.strokeRect(24.5, y+0.5, w-49, 41);
-    ctx.fillStyle = '#1e2433'; ctx.font = '15px sans-serif'; ctx.fillText(n, 38, y+26);
-    ctx.fillStyle = '#0d9488'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('S/. '+resumen[n].total.toFixed(2), w-40, y+26); ctx.textAlign = 'left';
-    y += 50;
+    ctx.fillStyle = colorPersona(n);
+    ctx.fillRect(24, y, w-48, 36);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px sans-serif';
+    ctx.fillText(n, 36, y+24);
+    ctx.textAlign = 'right'; ctx.fillText('S/. '+detalle[n].subtotal.toFixed(2), w-36, y+24); ctx.textAlign = 'left';
+    y += 36;
+    detalle[n].items.forEach((it,i) => {
+      ctx.fillStyle = i%2===0 ? '#ffffff' : '#f7f8fc';
+      ctx.fillRect(24, y, w-48, 30);
+      const cant = it.cantidad !== 1 ? cantTxt(it.cantidad) + ' x  ' : '';
+      ctx.fillStyle = '#1e2433'; ctx.font = '13px sans-serif';
+      ctx.fillText(cant + it.producto, 36, y+20);
+      if (it.compartido){
+        const anchoNombre = ctx.measureText(cant + it.producto).width;
+        ctx.fillStyle = '#8b90a3'; ctx.font = '11px sans-serif';
+        ctx.fillText('  (÷'+it.entreCuantos+' de S/'+it.montoTotalProducto.toFixed(2)+')', 36+anchoNombre, y+20);
+      }
+      ctx.fillStyle = '#0d9488'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText('S/. '+it.montoPersona.toFixed(2), w-36, y+20); ctx.textAlign = 'left';
+      y += 30;
+    });
+    y += 14;
   });
-  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 17px sans-serif'; ctx.textAlign = 'right';
-  ctx.fillText('Total: S/. '+totalGeneral.toFixed(2), w-40, y+22); ctx.textAlign = 'left';
+
+  ctx.strokeStyle = '#c9ccd8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(24,y); ctx.lineTo(w-24,y); ctx.stroke();
+  y += 34;
+  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 19px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('Total: S/. '+totalGeneral.toFixed(2), w-36, y); ctx.textAlign = 'left';
 
   canvas.toBlob(blob => {
     const nombreArchivo = 'division_' + (compra.Nombre||'compra').replace(/[^a-z0-9]+/gi,'_').toLowerCase() + '.png';
