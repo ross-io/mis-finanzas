@@ -658,7 +658,13 @@
   <div class="modal">
     <span class="close-x" onclick="cerrarModal('modalRevisarEscaneo')">✕</span>
     <h3>Revisa lo que se detectó</h3>
-    <p style="font-size:12px; color:var(--text-dim);">El escaneo no es perfecto — revisa nombres y precios antes de agregar. Destilda lo que no quieras agregar.</p>
+    <p style="font-size:12px; color:var(--text-dim);">El escaneo no es perfecto — revisa nombres y precios antes de agregar. Destilda lo que no quieras agregar. Si falta algún producto de la boleta, agrégalo a mano abajo con "+ Agregar producto" después de cerrar este modal.</p>
+    <button class="btn btn-sm btn-secondary" onclick="toggleTextoOCR()" id="btnToggleTextoOCR">👁️ Ver texto que leyó el OCR</button>
+    <div id="textoOCRWrap" style="display:none; margin:10px 0;">
+      <p style="font-size:11px; color:var(--text-dim);">Esto es lo que el OCR realmente leyó de la(s) foto(s). Si un producto no aparece aquí, la foto no se leyó bien en esa parte (súbela de nuevo, más enfocada). Si SÍ aparece aquí pero no en la lista de abajo, cópiame este texto para revisar el detector.</p>
+      <textarea id="textoOCRContenido" readonly style="width:100%; height:160px; font-family:monospace; font-size:11px; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:8px;"></textarea>
+      <button class="btn btn-sm btn-secondary" style="margin-top:6px;" onclick="copiarTextoOCR()">📋 Copiar texto</button>
+    </div>
     <div id="listaCandidatosEscaneo"></div>
     <button class="btn btn-primary" style="margin-top:10px;" onclick="agregarCandidatosEscaneados()">Agregar seleccionados</button>
   </div>
@@ -1916,6 +1922,21 @@ function recalcularPrecioDescuento(prefix){
 }
 // ---------- ESCANEAR BOLETA (OCR) ----------
 let candidatosEscaneoActual = [];
+let textoOCRActual = '';
+function toggleTextoOCR(){
+  const wrap = document.getElementById('textoOCRWrap');
+  const abrir = wrap.style.display === 'none';
+  wrap.style.display = abrir ? 'block' : 'none';
+  if (abrir) document.getElementById('textoOCRContenido').value = textoOCRActual || '(sin texto)';
+}
+function copiarTextoOCR(){
+  const texto = textoOCRActual || '';
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(() => showToast('Texto copiado 📋')).catch(() => promptCopiaManual(texto));
+  } else {
+    promptCopiaManual(texto);
+  }
+}
 // Para un movimiento normal (no itemizado) solo nos interesa el TOTAL de la
 // boleta, no cada producto. Busca líneas con "TOTAL" (sin ser "SUBTOTAL") y
 // se queda con el número al final; prioriza las que digan "PAGAR" o
@@ -2012,6 +2033,8 @@ function escanearBoletaUI(imagenes){
       return;
     }
     limpiarFotosBoletaPendientes('compra');
+    textoOCRActual = res.texto || '';
+    document.getElementById('textoOCRWrap').style.display = 'none';
     if (res.tipoDocumento === 'recibo_servicio'){
       alert('Esto parece un recibo de servicio (luz, agua, internet), no una lista de productos. Para esto usa la pestaña "Registrar" en vez de una Compra de supermercado — ahí el escaneo te llena directo el monto y la fecha de vencimiento.');
       return;
@@ -2043,28 +2066,56 @@ function renderCandidatosEscaneo(){
       '<input type="number" id="cand'+i+'precio" value="'+Number(c.precio||0).toFixed(2)+'" step="0.01" style="flex:0.8;" title="Precio unitario"></div>';
   }).join('');
 }
-function agregarCandidatosEscaneados(){
-  const seleccionados = candidatosEscaneoActual.map((c,i) => ({
-    marcado: document.getElementById('cand'+i+'chk').checked,
-    producto: document.getElementById('cand'+i+'nombre').value.trim(),
-    cantidad: parseFloat(document.getElementById('cand'+i+'cantidad').value) || 1,
-    precio: parseFloat(document.getElementById('cand'+i+'precio').value) || 0
-  })).filter(c => c.marcado && c.producto && c.precio > 0);
+// Agrega los productos marcados UNO POR UNO (esperando a que cada uno
+// termine antes de mandar el siguiente). Antes se mandaban todos a la vez,
+// y el candado del backend (que solo permite guardar UN cambio genuino a la
+// vez) terminaba rechazando varios con "el sistema está ocupado" — y encima
+// el modal se cerraba igual, como si todo hubiera salido bien, perdiendo de
+// vista cuáles habían fallado. Ahora: si algo falla, NO se cierra el modal,
+// se avisa exactamente qué faltó, y los que sí se agregaron quedan
+// desmarcados solos (para que reintentar no los duplique).
+async function agregarCandidatosEscaneados(){
+  const seleccionados = [];
+  candidatosEscaneoActual.forEach((c, i) => {
+    if (!document.getElementById('cand'+i+'chk').checked) return;
+    const producto = document.getElementById('cand'+i+'nombre').value.trim();
+    const cantidad = parseFloat(document.getElementById('cand'+i+'cantidad').value) || 1;
+    const precio = parseFloat(document.getElementById('cand'+i+'precio').value) || 0;
+    if (producto && precio > 0) seleccionados.push({ indice: i, producto, cantidad, precio });
+  });
   if (!seleccionados.length){ showToast('No marcaste ningún producto'); return; }
-  let pendientes = seleccionados.length;
-  seleccionados.forEach(c => {
-    postData('addProductoCompra', {
+
+  const boton = document.querySelector('#modalRevisarEscaneo .btn-primary');
+  if (boton){ boton.disabled = true; }
+
+  let exitosos = 0;
+  const fallidos = [];
+  for (let i = 0; i < seleccionados.length; i++) {
+    const c = seleccionados[i];
+    if (boton) boton.textContent = 'Agregando ' + (i+1) + '/' + seleccionados.length + '…';
+    const res = await postData('addProductoCompra', {
       compraId: compraSeleccionadaId, producto: c.producto, cantidad: c.cantidad, precioVitrina: c.precio, precioReal: c.precio,
       tieneDescuento: false, tipoDivision: '', miembros: []
-    }).then(() => {
-      pendientes--;
-      if (pendientes === 0){
-        showToast(seleccionados.length + ' producto(s) agregados ✅');
-        cerrarModal('modalRevisarEscaneo');
-        cargarDatosYAbrirCompra(compraSeleccionadaId);
-      }
     });
-  });
+    if (res && !res.error) {
+      exitosos++;
+      const chk = document.getElementById('cand'+c.indice+'chk');
+      if (chk) chk.checked = false; // ya se agregó: se desmarca para que un reintento no lo duplique
+    } else {
+      fallidos.push(c.producto);
+    }
+  }
+
+  if (boton){ boton.disabled = false; boton.textContent = 'Agregar seleccionados'; }
+
+  if (!fallidos.length){
+    showToast(exitosos + ' producto(s) agregados ✅');
+    cerrarModal('modalRevisarEscaneo');
+    cargarDatosYAbrirCompra(compraSeleccionadaId);
+  } else {
+    cargarDatosYAbrirCompra(compraSeleccionadaId); // refresca para reflejar los que sí se guardaron
+    alert('Se agregaron ' + exitosos + ' de ' + seleccionados.length + ' producto(s).\n\nNo se pudieron agregar: ' + fallidos.join(', ') + '.\n\nQuedaron marcados solo esos — presiona "Agregar seleccionados" de nuevo para reintentar.');
+  }
 }
 
 function guardarProductoCompra(){
