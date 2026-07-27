@@ -347,9 +347,11 @@
           <button class="btn btn-sm btn-secondary" onclick="editarCompraActual()">✏️ Nombre/fecha</button>
         </div>
         <div id="detalleCompraResumen" style="margin-bottom:14px; color:var(--text-dim); font-size:13px;"></div>
+        <button class="btn btn-sm btn-whatsapp" style="width:auto; margin-bottom:14px;" onclick="compartirCompraWhatsApp()">📲 Compartir división por WhatsApp</button>
         <div id="fotoBoletaWrap" style="margin-bottom:12px;"></div>
-        <button class="btn btn-secondary" id="btnEscanearBoleta" onclick="document.getElementById('inputEscanearBoleta').click()" style="margin-bottom:12px;">📷 Escanear boleta y sugerir productos</button>
-        <input type="file" id="inputEscanearBoleta" accept="image/*" capture="environment" style="display:none;" onchange="escanearBoletaUI(this.files[0])">
+        <button class="btn btn-secondary" id="btnEscanearBoleta" onclick="document.getElementById('inputEscanearBoleta').click()" style="margin-bottom:4px;">📷 Escanear boleta y sugerir productos</button>
+        <p style="font-size:11px; color:var(--text-dim); margin:0 0 12px;">Boleta larga: puedes elegir varias fotos a la vez (en orden) y se leen todas juntas.</p>
+        <input type="file" id="inputEscanearBoleta" accept="image/*" multiple style="display:none;" onchange="escanearBoletaUI(this.files)">
         <div id="listaProductosCompra"></div>
         <div id="avisoCerrada" style="display:none; font-size:12px; color:var(--text-dim); margin:10px 0;">
           Esta compra ya fue finalizada. Aún puedes reasignar a quién le toca cada producto (el gasto se ajusta solo si cambias precios).
@@ -388,6 +390,17 @@
   <!-- REGISTRAR -->
   <div class="screen" id="screen-registrar">
     <div class="card">
+      <div class="card-title">🎙️ Anotar por voz</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Di algo como "Rossio compró hamburguesas con mi tarjeta BCP por 45 soles" y te prellenamos el formulario de abajo para que revises y guardes.</p>
+      <button class="btn btn-secondary" id="btnComandoVoz" onclick="iniciarComandoVoz()">🎙️ Hablar</button>
+      <div class="row-2" style="margin-top:8px;">
+        <input type="text" id="comandoVozManual" placeholder="...o escríbelo aquí si prefieres" onkeydown="if(event.key==='Enter') procesarComandoVozManual()">
+        <button class="btn btn-sm btn-secondary" style="width:auto;" onclick="procesarComandoVozManual()">Interpretar</button>
+      </div>
+      <div id="comandoVozTexto" style="font-size:13px; color:var(--text-dim); margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">¿Debo comprarlo? 🤖</div>
       <div class="field"><input type="text" id="asesorTexto" placeholder="ej. Zapatillas por S/250"></div>
       <button class="btn btn-secondary" onclick="consultarAsesor()">Consultar</button>
@@ -419,8 +432,8 @@
         <div class="chip" data-tipo="Ahorro" onclick="setTipo('Ahorro')">Ahorro</div>
       </div>
       <input type="number" class="monto-input" id="fMonto" placeholder="S/ 0.00" inputmode="decimal" oninput="previsualizarCuota(); actualizarResumenCompartir('f');">
-      <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('inputEscanearRegistro').click()">📷 Escanear boleta (llenar monto)</button>
-      <input type="file" id="inputEscanearRegistro" accept="image/*" capture="environment" style="display:none;" onchange="escanearBoletaRegistrarUI(this.files[0])">
+      <button class="btn btn-secondary" style="margin-top:8px;" onclick="document.getElementById('inputEscanearRegistro').click()">📷 Escanear boleta o recibo (llenar monto)</button>
+      <input type="file" id="inputEscanearRegistro" accept="image/*" multiple style="display:none;" onchange="escanearBoletaRegistrarUI(this.files)">
       <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
       <div class="field" id="fMetodoWrap"><label>Método</label><div class="chip-row" id="fMetodos"></div></div>
       <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
@@ -437,7 +450,7 @@
       <div class="field"><label>Fecha</label><input type="date" id="fFecha"></div>
       <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" placeholder="ej. Almuerzo con Rappi"></div>
       <div class="field" id="compartirWrap">
-        <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir('f')"> Se comparte con alguien</label>
+        <label class="check"><input type="checkbox" id="fCompartir" onclick="toggleCompartir('f')"> Se comparte, o es 100% de otra persona</label>
         <div id="fCompartirPicker" style="margin-top:8px; display:none;">
           <div class="chip-row" id="fCompartirMiembros"></div>
           <div id="fCompartirResumen" style="font-size:13px; color:var(--text-dim);"></div>
@@ -530,6 +543,18 @@
       <button class="btn btn-sm btn-secondary" onclick="postData('desactivarRespaldoSemanal',{}).then(r=>!r.error&&showToast('Respaldo desactivado'))">Desactivar</button>
     </div>
     <button class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="postData('respaldarAhora',{}).then(r=>{ if(!r.error) showToast('Respaldo creado ✅'); })">Respaldar ahora mismo</button>
+
+    <div class="card-title" style="margin-top:18px;">🛵 Detección automática de Rappi/PedidosYa</div>
+    <p style="font-size:12px; color:var(--text-dim);">Revisa cada 30 min los correos de confirmación en el Gmail de esta cuenta y registra el gasto solo con el monto detectado. Es "best effort" (depende del formato del correo) — revisa el Historial de vez en cuando por si acaso.</p>
+    <div class="row-2">
+      <div class="field"><label>Persona por defecto</label><select id="rappiPersonaDefault"></select></div>
+      <div class="field"><label>Método por defecto</label><select id="rappiMetodoDefault"></select></div>
+    </div>
+    <button class="btn btn-sm btn-secondary" onclick="guardarConfigRappi()">Guardar persona/método</button>
+    <div class="row-2" style="margin-top:8px;">
+      <button class="btn btn-sm btn-secondary" onclick="postData('activarDeteccionRappi',{}).then(r=>!r.error&&showToast('Detección activada ✅'))">🛵 Activar detección</button>
+      <button class="btn btn-sm btn-secondary" onclick="postData('desactivarDeteccionRappi',{}).then(r=>!r.error&&showToast('Detección desactivada'))">Desactivar</button>
+    </div>
 
     <div class="card-title" style="margin-top:18px;">Avanzado: reparar un nombre suelto</div>
     <p style="font-size:12px; color:var(--text-dim);">Úsalo solo si algo (una tarjeta, un movimiento viejo) sigue mostrando un nombre que ya no usas — por ejemplo si renombraste "Yo" antes y quedó una referencia vieja. Esto NO crea un miembro nuevo, solo corrige texto suelto en tarjetas, movimientos, deudas y compras.</p>
@@ -664,7 +689,7 @@
     <div class="field"><label>Fecha</label><input type="date" id="emFecha"></div>
     <div class="field"><label>Descripción</label><input type="text" id="emDescripcion"></div>
     <div class="field" id="emCompartirWrap">
-      <label class="check"><input type="checkbox" id="emCompartir" onclick="toggleCompartir('em')"> Se comparte con alguien</label>
+      <label class="check"><input type="checkbox" id="emCompartir" onclick="toggleCompartir('em')"> Se comparte, o es 100% de otra persona</label>
       <div id="emCompartirPicker" style="margin-top:8px; display:none;">
         <div class="chip-row" id="emCompartirMiembros"></div>
         <div id="emCompartirResumen" style="font-size:13px; color:var(--text-dim);"></div>
@@ -1409,7 +1434,7 @@ function actualizarAvisoTarjetaAjena(metodo){
   const propietario = propietarioDeMetodo(metodo);
   if (propietario && propietario !== MI_PERSONA){
     aviso.style.display = 'block';
-    aviso.textContent = '⚠️ Esta tarjeta es de ' + propietario + '. Si no marcas "compartir", quedará registrado que TÚ le debes el 100% a ' + propietario + '. Si van a dividirlo, marca "compartir" y agrega TU nombre con tu parte (la deuda es hacia ' + propietario + ', no hacia ti).';
+    aviso.textContent = '⚠️ Esta tarjeta es de ' + propietario + '. Si no marcas "compartir", quedará registrado que TÚ le debes el 100% a ' + propietario + '. Si el gasto es de otra persona (no tuyo), marca "compartir" y selecciona SOLO a esa persona (no te incluyas a ti) — así la deuda queda 100% de ella hacia ' + propietario + '.';
   } else {
     aviso.style.display = 'none';
   }
@@ -1419,10 +1444,13 @@ function toggleCompartir(prefix){
   document.getElementById(prefix+'CompartirPicker').style.display = on ? 'block' : 'none';
   if (on) renderCompartirMiembros(prefix);
 }
-// Pinta los chips de miembros (multi-selección) para dividir el gasto. Si la
-// tarjeta usada es de otra persona, preselecciona TU nombre (la deuda es
-// hacia el dueño de la tarjeta, no hacia ti — por eso tu propio nombre
-// también puede aparecer como alguien que "debe" en este reparto).
+// Pinta los chips de miembros (multi-selección, TÚ incluido) para dividir el
+// gasto. Cada chip seleccionado es alguien que debe una parte igual. Si te
+// dejas FUERA de la selección, el gasto queda 100% de las personas elegidas
+// (tú no entras en la cuenta) — así se puede marcar "esto es 100% de mi
+// hermana, yo solo pagué". Si la tarjeta usada es de otra persona, se
+// preselecciona TU nombre por defecto (asumimos que tú le debes el 100%,
+// hasta que agregues o quites gente).
 function renderCompartirMiembros(prefix, preseleccionados){
   const wrap = document.getElementById(prefix+'CompartirMiembros');
   const metodo = document.querySelector('#'+prefix+'Metodos .chip.active')?.textContent || '';
@@ -1437,24 +1465,30 @@ function toggleChipCompartir(el, prefix){
   el.classList.toggle('active');
   actualizarResumenCompartir(prefix);
 }
-// Recalcula en vivo: monto total ÷ (seleccionados + tú) = cuánto le toca a
-// cada quien. Se vuelve a llamar cada vez que cambia el monto, el descuento
-// (en Compras eso ya se refleja en el monto), o quién está seleccionado.
+// Recalcula en vivo: monto total ÷ (cantidad de chips seleccionados,
+// incluyéndote a ti SOLO si tú mismo estás entre los seleccionados). Se
+// vuelve a llamar cada vez que cambia el monto o quién está seleccionado.
 function actualizarResumenCompartir(prefix){
   const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
   const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
   const resumenEl = document.getElementById(prefix+'CompartirResumen');
-  if (!seleccionados.length){ resumenEl.textContent = 'Selecciona con quién se divide (tú siempre entras en la cuenta).'; return; }
-  const divisor = seleccionados.length + 1;
+  if (!seleccionados.length){ resumenEl.textContent = 'Selecciona quién(es) deben esta parte (inclúyete si tú también pagas tu porción, o déjate fuera si es 100% de otra persona).'; return; }
+  const divisor = seleccionados.length;
   const cadaUno = monto / divisor;
-  resumenEl.textContent = 'Se divide entre ' + divisor + ' (tú + ' + seleccionados.length + '): S/' + cadaUno.toFixed(2) + ' cada uno.';
+  const teIncluyes = seleccionados.indexOf(MI_PERSONA) !== -1;
+  resumenEl.textContent = teIncluyes
+    ? ('Se divide entre ' + divisor + ' (' + seleccionados.join(', ') + '): S/' + cadaUno.toFixed(2) + ' cada uno.')
+    : ('Es 100% de ' + seleccionados.join(' y ') + (divisor > 1 ? (' — S/' + cadaUno.toFixed(2) + ' cada uno') : '') + '. Tú no entras en esta cuenta.');
 }
-// Lee la selección actual y arma el array {persona, monto} a mandar al backend.
+// Lee la selección actual y arma el array {persona, monto} a mandar al
+// backend. Si tú apareces entre los seleccionados, tu propio nombre también
+// va en el array (el backend ya sabe no crear una deuda tuya hacia ti mismo
+// cuando el acreedor eres tú); si no apareces, el 100% queda entre los demás.
 function leerCompartidoSeleccionado(prefix){
   const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
   const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
   if (!seleccionados.length) return [];
-  const divisor = seleccionados.length + 1;
+  const divisor = seleccionados.length;
   const cadaUno = Math.round((monto / divisor) * 100) / 100;
   return seleccionados.map(nombre => ({ persona: nombre, monto: cadaUno }));
 }
@@ -1576,6 +1610,65 @@ function prellenarDesdeAsesor(monto){
   document.getElementById('fDescripcion').value = document.getElementById('asesorTexto').value;
 }
 
+// ---------- COMANDO DE VOZ ("Jarvis, anota...") ----------
+// Usa el reconocimiento de voz NATIVO del navegador (Web Speech API, gratis,
+// sin librerías) para transcribir lo que dices, y le manda ese texto al
+// backend (que usa Gemini) para que lo convierta en un movimiento. Nunca se
+// guarda solo — siempre prellena el formulario de abajo para que revises y
+// presiones "Guardar" tú mismo/a, igual que con el escaneo de boletas.
+let reconocimientoVoz = null;
+function iniciarComandoVoz(){
+  const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognitionAPI){ showToast('Tu navegador no soporta dictado por voz — usa el campo de texto de abajo, o prueba en Chrome/Android'); return; }
+  const boton = document.getElementById('btnComandoVoz');
+  const cajaTexto = document.getElementById('comandoVozTexto');
+  reconocimientoVoz = new SpeechRecognitionAPI();
+  reconocimientoVoz.lang = 'es-PE';
+  reconocimientoVoz.interimResults = false;
+  reconocimientoVoz.maxAlternatives = 1;
+  boton.textContent = '🔴 Escuchando…'; boton.disabled = true;
+  cajaTexto.textContent = '';
+  reconocimientoVoz.onresult = (ev) => {
+    const texto = ev.results[0][0].transcript;
+    cajaTexto.textContent = '"' + texto + '"';
+    procesarComandoVoz(texto);
+  };
+  reconocimientoVoz.onerror = (ev) => { showToast('No se entendió — intenta de nuevo (' + ev.error + ')'); };
+  reconocimientoVoz.onend = () => { boton.textContent = '🎙️ Hablar'; boton.disabled = false; };
+  reconocimientoVoz.start();
+}
+function procesarComandoVozManual(){
+  const texto = document.getElementById('comandoVozManual').value.trim();
+  if (!texto) return;
+  document.getElementById('comandoVozTexto').textContent = '"' + texto + '"';
+  procesarComandoVoz(texto);
+}
+function procesarComandoVoz(texto){
+  postData('interpretarComandoVoz', { texto }).then(res => {
+    if (res.error){ showToast('Error: ' + res.error); return; }
+    setTipo(res.tipo || 'Gasto');
+    const catsWrap = document.getElementById('fCategorias');
+    catsWrap.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.textContent === res.categoria));
+    const metWrap = document.getElementById('fMetodos');
+    metWrap.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.textContent === res.metodo));
+    actualizarAvisoTarjetaAjena(res.metodo);
+    document.getElementById('fDescripcion').value = res.descripcion || '';
+    if (res.monto){ document.getElementById('fMonto').value = res.monto; previsualizarCuota(); }
+    if (res.compartido && res.compartido.length){
+      document.getElementById('fCompartir').checked = true;
+      toggleCompartir('f');
+      renderCompartirMiembros('f', res.compartido.map(c => c.persona));
+    }
+    const faltante = res.faltante || [];
+    if (faltante.length){
+      showToast('Me faltó: ' + faltante.join(', ') + ' — revisa y completa antes de guardar');
+      if (faltante.indexOf('monto') !== -1) document.getElementById('fMonto').focus();
+    } else {
+      showToast('Entendido ✅ Revisa los datos y presiona Guardar');
+    }
+  });
+}
+
 // ---------- COMPRAS ----------
 // ---------- LISTA DE COMPRAS (checklist compartido) ----------
 function renderListaComprasPendientes(){
@@ -1690,6 +1783,79 @@ function renderDetalleCompra(){
   }).join('');
 }
 
+// ---------- COMPARTIR DIVISIÓN DE UNA COMPRA POR WHATSAPP ----------
+// Calcula cuánto le toca a cada persona de ESTA compra puntual (sumando la
+// parte de cada producto según a quién se le asignó) y arma dos formatos:
+// una imagen tipo tabla (mismo patrón que exportarResumenDeudas) y un texto
+// línea por línea "Nombre: S/. XX.XX" listo para pegar en un chat. Si el
+// navegador soporta compartir archivos (Web Share API — Chrome/Android en
+// su mayoría), se abre el selector nativo para elegir el grupo de WhatsApp y
+// la imagen llega adjunta de una vez. No existe una forma de elegir un grupo
+// de WhatsApp específico de antemano sin la API de WhatsApp Business (no
+// disponible aquí) — por eso siempre es el USUARIO quien elige el chat/grupo
+// destino, ya sea en el selector nativo o dentro de WhatsApp directamente.
+function totalesPorPersonaDeCompra(compra, productos){
+  const totales = {};
+  productos.forEach(p => {
+    let miembros = []; try { miembros = JSON.parse(p.Miembros || '[]'); } catch(e){}
+    if (!miembros.length) miembros = [compra.Persona || 'Sin asignar']; // igual criterio que al finalizar: sin asignar queda del creador
+    const cadaUno = Number(p.MontoTotal || 0) / miembros.length;
+    miembros.forEach(m => { totales[m] = (totales[m]||0) + cadaUno; });
+  });
+  return totales;
+}
+function compartirCompraWhatsApp(){
+  const compra = compraActual();
+  const productos = productosDeCompraActual();
+  if (!compra || !productos.length){ showToast('Agrega productos y asígnalos antes de compartir'); return; }
+  const totales = totalesPorPersonaDeCompra(compra, productos);
+  const nombres = Object.keys(totales).sort((a,b) => totales[b]-totales[a]);
+  if (!nombres.length){ showToast('Nada asignado todavía'); return; }
+  const totalGeneral = nombres.reduce((s,n) => s+totales[n], 0);
+  const fechaTxt = new Date(compra.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+
+  let texto = '🛒 *' + compra.Nombre + '* — ' + fechaTxt + '\n\n';
+  nombres.forEach(n => { texto += n + ': S/. ' + totales[n].toFixed(2) + '\n'; });
+  texto += '\nTotal: S/. ' + totalGeneral.toFixed(2);
+
+  const canvas = document.getElementById('canvasExport');
+  const w = 600, h = 130 + nombres.length*50 + 60;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f2f3fa'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('🛒 ' + compra.Nombre, 24, 42);
+  ctx.fillStyle = '#8b90a3'; ctx.font = '13px sans-serif'; ctx.fillText(fechaTxt, 24, 64);
+  let y = 92;
+  nombres.forEach(n => {
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(24, y, w-48, 42);
+    ctx.strokeStyle = '#eaebf3'; ctx.lineWidth = 1; ctx.strokeRect(24.5, y+0.5, w-49, 41);
+    ctx.fillStyle = '#1e2433'; ctx.font = '15px sans-serif'; ctx.fillText(n, 38, y+26);
+    ctx.fillStyle = '#0d9488'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('S/. '+totales[n].toFixed(2), w-40, y+26); ctx.textAlign = 'left';
+    y += 50;
+  });
+  ctx.fillStyle = '#1e2433'; ctx.font = 'bold 17px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('Total: S/. '+totalGeneral.toFixed(2), w-40, y+22); ctx.textAlign = 'left';
+
+  canvas.toBlob(blob => {
+    const nombreArchivo = 'division_' + (compra.Nombre||'compra').replace(/[^a-z0-9]+/gi,'_').toLowerCase() + '.png';
+    const archivo = new File([blob], nombreArchivo, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [archivo] })){
+      navigator.share({ files: [archivo], text: texto, title: compra.Nombre }).catch(() => { /* el usuario canceló, no pasa nada */ });
+      return;
+    }
+    // Sin soporte para compartir archivos: se descarga la imagen y se abre
+    // WhatsApp (sin número = deja elegir el chat/grupo destino) con el texto
+    // ya armado; el usuario adjunta la imagen descargada a mano.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombreArchivo; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Imagen descargada — se abrirá WhatsApp con el texto, adjunta la imagen ahí 📎');
+    setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank'), 700);
+  });
+}
+
 function toggleFormProducto(){
   const wrap = document.getElementById('formProductoWrap');
   const abrir = wrap.style.display === 'none';
@@ -1753,36 +1919,48 @@ function extraerTotalSugerido(texto){
   });
   return preferido !== null ? preferido : cualquiera;
 }
-function escanearBoletaRegistrarUI(archivo){
-  if (!archivo) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const base64 = reader.result.split(',')[1];
-    showToast('Leyendo la boleta…');
-    postData('escanearBoleta', { base64, mime: archivo.type }).then(res => {
-      if (res.error){ alert('No se pudo escanear la boleta:\n\n' + res.error); return; }
-      const total = extraerTotalSugerido(res.texto || '');
+// Convierte un FileList (una o varias fotos) a [{base64, mime}, ...] en el
+// mismo orden en que el usuario las eligió — así una boleta larga que no
+// entra en una sola foto se manda completa y en orden.
+function archivosABase64(fileList){
+  return Promise.all([...fileList].map(archivo => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ base64: reader.result.split(',')[1], mime: archivo.type });
+    reader.onerror = reject;
+    reader.readAsDataURL(archivo);
+  })));
+}
+function escanearBoletaRegistrarUI(files){
+  if (!files || !files.length) return;
+  showToast('Leyendo ' + (files.length>1 ? files.length+' fotos…' : 'la boleta…'));
+  archivosABase64(files).then(imagenes => {
+    postData('escanearBoleta', { imagenes }).then(res => {
+      if (res.error){ alert('No se pudo escanear:\n\n' + res.error); return; }
+      const total = res.totalDetectado || extraerTotalSugerido(res.texto || '');
       const primeraLinea = (res.texto || '').split('\n').map(l => l.trim()).filter(l => l)[0] || '';
       if (total){
-        document.getElementById('fMonto').value = total.toFixed(2);
+        document.getElementById('fMonto').value = Number(total).toFixed(2);
         previsualizarCuota();
       }
-      if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
+      if (res.proveedor) document.getElementById('fDescripcion').value = res.proveedor;
+      else if (primeraLinea) document.getElementById('fDescripcion').value = primeraLinea;
       if (res.fechaDetectada) document.getElementById('fFecha').value = res.fechaDetectada;
-      showToast(total ? ('Detecté S/'+total.toFixed(2)+(res.fechaDetectada?' del '+res.fechaDetectada:'')+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
+      const tipoTxt = res.tipoDocumento === 'recibo_servicio' ? 'recibo de servicio' : 'boleta';
+      showToast(total ? ('Detecté '+tipoTxt+': S/'+Number(total).toFixed(2)+(res.fechaDetectada?' ('+res.fechaDetectada+')':'')+' — revisa antes de guardar') : 'No detecté el total automáticamente, ingrésalo a mano');
     });
-  };
-  reader.readAsDataURL(archivo);
+  });
 }
-function escanearBoletaUI(archivo){
-  if (!archivo) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const base64 = reader.result.split(',')[1];
-    showToast('Leyendo la boleta… puede tardar unos segundos');
-    postData('escanearBoleta', { base64, mime: archivo.type }).then(res => {
+function escanearBoletaUI(files){
+  if (!files || !files.length) return;
+  showToast('Leyendo ' + (files.length>1 ? files.length+' fotos…' : 'la boleta…') + ' puede tardar unos segundos');
+  archivosABase64(files).then(imagenes => {
+    postData('escanearBoleta', { imagenes }).then(res => {
       if (res.error){
         alert('No se pudo escanear la boleta:\n\n' + res.error);
+        return;
+      }
+      if (res.tipoDocumento === 'recibo_servicio'){
+        alert('Esto parece un recibo de servicio (luz, agua, internet), no una lista de productos. Para esto usa la pestaña "Registrar" en vez de una Compra de supermercado — ahí el escaneo te llena directo el monto y la fecha de vencimiento.');
         return;
       }
       candidatosEscaneoActual = res.candidatos || [];
@@ -1799,8 +1977,7 @@ function escanearBoletaUI(archivo){
       renderCandidatosEscaneo();
       abrirModal('modalRevisarEscaneo');
     });
-  };
-  reader.readAsDataURL(archivo);
+  });
 }
 function renderCandidatosEscaneo(){
   document.getElementById('listaCandidatosEscaneo').innerHTML = candidatosEscaneoActual.map((c,i) =>
@@ -2299,8 +2476,27 @@ function abrirModal(id){
     renderListaMiembrosConfig();
     renderListaTarjetasConfig();
     renderPresupuestosConfig();
+    poblarSelectsRappi();
   }
   document.getElementById(id).classList.add('active');
+}
+function poblarSelectsRappi(){
+  const personaSel = document.getElementById('rappiPersonaDefault');
+  const metodoSel = document.getElementById('rappiMetodoDefault');
+  const personaActual = getConfig('RappiPersonaDefault') || '';
+  const metodoActual = getConfig('RappiMetodoDefault') || 'Efectivo';
+  personaSel.innerHTML = getNombresMiembros().map(n => '<option value="'+n+'"'+(n===personaActual?' selected':'')+'>'+n+'</option>').join('');
+  metodoSel.innerHTML = getMetodos('Gasto').filter(m => m.indexOf('Pago a ')!==0).map(m => '<option value="'+m+'"'+(m===metodoActual?' selected':'')+'>'+m+'</option>').join('');
+}
+function guardarConfigRappi(){
+  const persona = document.getElementById('rappiPersonaDefault').value;
+  const metodo = document.getElementById('rappiMetodoDefault').value;
+  postData('updateConfig', { RappiPersonaDefault: persona, RappiMetodoDefault: metodo }).then(res => {
+    if (res.error) return;
+    setConfigLocal('RappiPersonaDefault', persona);
+    setConfigLocal('RappiMetodoDefault', metodo);
+    showToast('Guardado ✅');
+  });
 }
 function cerrarModal(id){ document.getElementById(id).classList.remove('active'); }
 
