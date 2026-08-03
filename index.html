@@ -24,9 +24,9 @@
   body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .2s, color .2s;}
 
   #app{min-height:100vh; position:relative;}
-  header{padding:18px 20px 10px; display:flex; justify-content:space-between; align-items:center;}
-  header h1{font-size:19px; margin:0; font-weight:800; display:flex; align-items:center; gap:8px;}
-  header .head-actions{display:flex; align-items:center; gap:10px;}
+  header{padding:14px 16px 8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px 10px;}
+  header h1{font-size:19px; margin:0; font-weight:800; display:flex; align-items:center; gap:8px; white-space:nowrap;}
+  header .head-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; flex:1; min-width:0;}
   .persona-pill{
     font-size:12px; font-weight:700; background:var(--card2); border:1px solid var(--border);
     padding:6px 11px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px;
@@ -85,9 +85,9 @@
 
   .split-row{display:flex; gap:8px; margin-bottom:8px;} .split-row input{flex:1;}
 
-  nav.nav-mobile{position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border); display:flex; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:10; box-shadow:0 -4px 18px rgba(30,36,60,.06); overflow-x:auto;}
-  nav.nav-mobile .nav-item{flex:1; min-width:56px; text-align:center; padding:6px 0; cursor:pointer; color:var(--text-dim); font-size:11px;}
-  nav.nav-mobile .nav-item .ic{font-size:20px; display:block; margin-bottom:2px;}
+  nav.nav-mobile{position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border); display:flex; padding:6px 2px calc(6px + env(safe-area-inset-bottom)); z-index:10; box-shadow:0 -4px 18px rgba(30,36,60,.06); overflow-x:auto;}
+  nav.nav-mobile .nav-item{flex:1; min-width:48px; text-align:center; padding:5px 0; cursor:pointer; color:var(--text-dim); font-size:10px;}
+  nav.nav-mobile .nav-item .ic{font-size:18px; display:block; margin-bottom:1px;}
   nav.nav-mobile .nav-item.active{color:var(--accent);}
 
   nav.nav-desktop{display:none; flex-direction:column; gap:4px; padding:8px;}
@@ -255,6 +255,19 @@
     body.view-desktop #app{padding-left:0; max-width:900px;}
     body.view-desktop nav.nav-desktop{left:0; position:sticky; top:0; height:auto; float:left;}
   }
+
+  /* ---------- MÓVIL ANGOSTO: evitar que el header y el comparador se desborden ---------- */
+  @media (max-width:480px){
+    body:not(.view-desktop) #viewToggle{display:none;} /* redundante en un celular real: "auto" ya detecta que es mobile */
+    body:not(.view-desktop) .persona-pill .pp-emoji{display:none;} /* oculta el emoji 👤 si hace falta más aire, queda solo el nombre */
+  }
+  @media (max-width:380px){
+    body:not(.view-desktop) header h1 .app-title-text{display:none;} /* deja solo la moneda 🪙, el nombre completo estorba en pantallas muy angostas */
+    body:not(.view-desktop) header{padding:12px 12px 6px;}
+  }
+  .comparar-selectores{flex-wrap:wrap;}
+  .comparar-selectores select{flex:1 1 100px; min-width:0;}
+  .comparar-vs{flex:0 0 auto;}
 </style>
 </head>
 <body>
@@ -300,10 +313,10 @@
   </nav>
 
   <header>
-    <h1>🪙 Mis Finanzas</h1>
+    <h1>🪙 <span class="app-title-text">Mis Finanzas</span></h1>
     <div class="head-actions">
       <span class="gear" onclick="abrirBuscadorGlobal()" title="Buscar en todo">🔍</span>
-      <span class="persona-pill" id="personaPill" onclick="abrirModal('modalConfig')">👤 <span id="personaPillNombre">—</span></span>
+      <span class="persona-pill" id="personaPill" onclick="abrirModal('modalConfig')"><span class="pp-emoji">👤</span> <span id="personaPillNombre">—</span></span>
       <div class="view-toggle" id="viewToggle">
         <button data-v="mobile" onclick="setView('mobile')">📱</button>
         <button data-v="desktop" onclick="setView('desktop')">🖥️</button>
