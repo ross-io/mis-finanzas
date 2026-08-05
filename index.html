@@ -570,7 +570,11 @@
         <button class="btn btn-secondary" id="btnAbrirFormProducto" onclick="toggleFormProducto()" style="margin-top:6px;">+ Agregar producto</button>
 
         <div id="formProductoWrap" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
-          <div class="field"><label>Producto</label><input type="text" id="pNombre" placeholder="ej. Leche Gloria 1L"></div>
+          <div class="field">
+            <label>Producto</label>
+            <input type="text" id="pNombre" list="productosDatalist" placeholder="Escribe para buscar, ej. Detergente" autocomplete="off" onchange="normalizarProductoElegido('pNombre')">
+            <p style="font-size:11px; color:var(--text-dim); margin:5px 0 0;">Escribe parte del nombre para ver productos usados en compras anteriores.</p>
+          </div>
           <div class="field">
             <label class="check"><input type="checkbox" id="pEsTransporte" onclick="toggleCamposTransporte('p')"> 🚕 Es transporte (taxi, pasaje — no un producto del súper)</label>
           </div>
@@ -823,6 +827,7 @@
 <canvas id="canvasExport" style="display:none;"></canvas>
 <datalist id="descripcionesDatalist"></datalist>
 <datalist id="tagsDatalist"></datalist>
+<datalist id="productosDatalist"></datalist>
 
 <!-- MODAL CONFIG -->
 <div class="modal-bg" id="modalConfig">
@@ -938,7 +943,10 @@
     <span class="close-x" onclick="cerrarModal('modalEditarProducto')">✕</span>
     <h3 id="editarProductoTitulo">Editar producto</h3>
     <div id="editarProductoCamposPrecio">
-      <div class="field"><label>Producto</label><input type="text" id="epNombre"></div>
+      <div class="field">
+        <label>Producto</label>
+        <input type="text" id="epNombre" list="productosDatalist" placeholder="Escribe para buscar un producto" autocomplete="off" onchange="normalizarProductoElegido('epNombre')">
+      </div>
       <div class="field">
         <label class="check"><input type="checkbox" id="epEsTransporte" onclick="toggleCamposTransporte('ep')"> 🚕 Es transporte (taxi, pasaje — no un producto del súper)</label>
       </div>
@@ -1725,6 +1733,7 @@ function render(){
   renderComparador();
   poblarDatalistDescripciones();
   poblarDatalistTags();
+  poblarDatalistProductos();
   renderTagFijadoBanner();
   if (document.getElementById('screen-calendario').classList.contains('active')) renderCalendario();
 }
@@ -1751,6 +1760,124 @@ function poblarDatalistTags(){
   });
   const ordenadas = Object.keys(conteo).sort((a,b) => conteo[b]-conteo[a]).slice(0,60);
   document.getElementById('tagsDatalist').innerHTML = ordenadas.map(t => '<option value="'+t.replace(/"/g,'&quot;')+'">').join('');
+}
+
+// ---------- AUTOCOMPLETADO DE PRODUCTOS ----------
+// Usa todos los productos recibidos en state.productosCompra, por lo que
+// incluye productos de compras anteriores y de las demás compras familiares
+// visibles para la aplicación. También incorpora la lista de compras.
+function limpiarNombreProducto(nombre){
+  return String(nombre || '').trim().replace(/\s+/g, ' ');
+}
+
+function claveNombreProducto(nombre){
+  return limpiarNombreProducto(nombre).toLocaleLowerCase('es-PE');
+}
+
+function poblarDatalistProductos(){
+  const datalist = document.getElementById('productosDatalist');
+  if (!datalist) return;
+
+  const productos = new Map();
+
+  function agregar(nombre, fecha, precio, comprado){
+    const nombreLimpio = limpiarNombreProducto(nombre);
+    if (!nombreLimpio) return;
+
+    const clave = claveNombreProducto(nombreLimpio);
+    const fechaObj = fecha ? new Date(fecha) : null;
+    const timestamp = fechaObj && !Number.isNaN(fechaObj.getTime()) ? fechaObj.getTime() : 0;
+    const existente = productos.get(clave) || {
+      nombre: nombreLimpio,
+      veces: 0,
+      ultimaFecha: 0,
+      ultimoPrecio: 0,
+      estaEnLista: false
+    };
+
+    if (comprado) existente.veces++;
+    else existente.estaEnLista = true;
+
+    // Conserva la forma escrita y el precio del registro más reciente.
+    if (timestamp >= existente.ultimaFecha){
+      existente.nombre = nombreLimpio;
+      existente.ultimaFecha = timestamp;
+      if (Number(precio) > 0) existente.ultimoPrecio = Number(precio);
+    }
+
+    productos.set(clave, existente);
+  }
+
+  state.productosCompra.forEach(producto => {
+    agregar(producto.Producto, producto.Fecha, producto.PrecioReal, true);
+  });
+
+  state.listaCompras.forEach(item => {
+    agregar(item.Producto, item.Fecha, 0, false);
+  });
+
+  const ordenados = [...productos.values()]
+    .sort((a,b) => {
+      if (b.veces !== a.veces) return b.veces - a.veces;
+      if (b.ultimaFecha !== a.ultimaFecha) return b.ultimaFecha - a.ultimaFecha;
+      return a.nombre.localeCompare(b.nombre, 'es', { sensitivity:'base' });
+    })
+    .slice(0,300);
+
+  datalist.innerHTML = '';
+  const fragmento = document.createDocumentFragment();
+
+  ordenados.forEach(producto => {
+    const opcion = document.createElement('option');
+    opcion.value = producto.nombre;
+
+    if (producto.veces > 0){
+      let detalle = producto.veces === 1
+        ? 'Comprado 1 vez'
+        : 'Comprado ' + producto.veces + ' veces';
+      if (producto.ultimoPrecio > 0){
+        detalle += ' · último precio S/' + producto.ultimoPrecio.toFixed(2);
+      }
+      opcion.label = detalle;
+    } else {
+      opcion.label = 'Está en la lista de compras';
+    }
+
+    fragmento.appendChild(opcion);
+  });
+
+  datalist.appendChild(fragmento);
+}
+
+// Recupera la escritura más reciente del producto si el usuario escribe el
+// mismo nombre con distintas mayúsculas o espacios. No cambia nombres nuevos.
+function normalizarProductoElegido(inputId){
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const escrito = limpiarNombreProducto(input.value);
+  if (!escrito){
+    input.value = '';
+    return;
+  }
+
+  const clave = claveNombreProducto(escrito);
+  const coincidencias = state.productosCompra
+    .filter(producto => claveNombreProducto(producto.Producto) === clave)
+    .sort((a,b) => new Date(b.Fecha) - new Date(a.Fecha));
+
+  if (coincidencias.length){
+    input.value = limpiarNombreProducto(coincidencias[0].Producto);
+    return;
+  }
+
+  const coincidenciaLista = state.listaCompras.find(
+    item => claveNombreProducto(item.Producto) === clave
+  );
+
+  input.value = coincidenciaLista
+    ? limpiarNombreProducto(coincidenciaLista.Producto)
+    : escrito;
 }
 // ---------- ETIQUETA FIJADA (viaje/evento en curso) ----------
 // Pensado para viajes: en vez de escribir "viaje cusco" en cada gasto del
