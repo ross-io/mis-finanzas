@@ -343,6 +343,11 @@
       <div id="avisosSuscripciones"></div>
     </div>
 
+    <div class="card full-width" id="avisosLimiteTarjetaWrap" style="display:none;">
+      <div class="card-title">⚠️ Tarjetas cerca del límite o excedidas</div>
+      <div id="avisosLimiteTarjeta"></div>
+    </div>
+
     <div class="card full-width" id="cardZombieSuscripciones" style="display:none;">
       <div class="card-title">🧟 ¿Sigues usando esto?</div>
       <div id="zombieSuscripciones"></div>
@@ -569,7 +574,7 @@
         <input type="file" id="inputFotoRegistrarGaleria" accept="image/*" multiple style="display:none;" onchange="agregarFotosBoletaUI('registrar', this.files); this.value='';">
         <div id="fotosRegistrarPendientesWrap" style="display:none; margin-top:8px;"></div>
         <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
-        <div class="field" id="fMetodoWrap"><label>Método</label><div id="fMetodoPicker" class="metodo-picker"></div></div>
+        <div class="field" id="fMetodoWrap"><label>Método</label><div id="fMetodoPicker" class="metodo-picker"></div><div id="fPagadorPicker" style="display:none;"></div></div>
         <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
         <div class="field" id="cuotasWrap">
           <label class="check"><input type="checkbox" id="fCuotas" onclick="toggleCuotas()"> Pagar en cuotas</label>
@@ -866,10 +871,11 @@
     <span class="close-x" onclick="cerrarModal('modalFinalizarCompra')">✕</span>
     <h3>Finalizar compra</h3>
     <p id="finalizarResumen" style="color:var(--text-dim); font-size:14px;"></p>
-    <div class="field"><label>¿Con qué pagaste el súper?</label><div id="finalizarMetodosPicker" class="metodo-picker"></div></div>
+    <div class="field"><label>¿Con qué pagaste el súper?</label><div id="finalizarMetodosPicker" class="metodo-picker"></div><div id="finalizarPagadorSuper" style="display:none;"></div></div>
     <div class="field" id="finalizarTransporteWrap" style="display:none;">
       <label>🚕 ¿Con qué pagaste el transporte? (puede ser distinto)</label>
       <div id="finalizarMetodosTransportePicker" class="metodo-picker"></div>
+      <div id="finalizarPagadorTransporte" style="display:none;"></div>
     </div>
     <div class="field"><label>Foto de la boleta (opcional)</label><input type="file" id="finalizarFoto" accept="image/*" capture="environment"></div>
     <button class="btn btn-primary" onclick="confirmarFinalizarCompra()">Confirmar y crear el gasto</button>
@@ -945,7 +951,7 @@
     <h3>Editar movimiento</h3>
     <div id="emCuotaAviso" style="display:none; font-size:12px; color:var(--text-dim); margin-bottom:10px;">Esta es una cuota individual — editar aquí solo afecta esta cuota, no las demás del mismo grupo.</div>
     <div class="field"><label>Categoría</label><div class="chip-row" id="emCategorias"></div></div>
-    <div class="field" id="emMetodoWrap"><label>Método</label><div id="emMetodoPicker" class="metodo-picker"></div></div>
+    <div class="field" id="emMetodoWrap"><label>Método</label><div id="emMetodoPicker" class="metodo-picker"></div><div id="emPagadorPicker" style="display:none;"></div></div>
     <div class="field"><label>Monto (S/)</label><input type="number" id="emMonto" step="0.01" oninput="actualizarResumenCompartir('em')"></div>
     <div class="field"><label>Fecha</label><input type="date" id="emFecha"></div>
     <div class="field"><label>Descripción</label><input type="text" id="emDescripcion" list="descripcionesDatalist"></div>
@@ -1167,6 +1173,38 @@ function leerMetodoPicker(containerId){
   const st = metodoPickerState[containerId];
   if (st && st.esPago && valorBase !== 'Efectivo' && valorBase !== 'Transferencia') return 'Pago a ' + valorBase;
   return valorBase;
+}
+
+// ---------- ¿QUIÉN PAGÓ? ----------
+// Cuando pagas con una tarjeta, su dueño ya responde sin ambigüedad quién
+// puso el dinero — no hace falta preguntar de nuevo. Pero Efectivo y
+// Transferencia no tienen dueño registrado, así que sin esto el sistema
+// asumía que quien está TIPEANDO el gasto en la app es quien pagó — lo cual
+// rompía cuando, por ejemplo, mamá paga el taxi en efectivo pero es otra
+// persona quien lo registra en el celular. Este picker solo aparece cuando
+// hace falta (método sin dueño) y se queda oculto el resto del tiempo.
+function renderPagadorPicker(containerId, metodoActual){
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  const propietario = propietarioDeMetodo(metodoActual);
+  if (propietario){ cont.style.display = 'none'; return; }
+  const valorPrevio = cont.dataset.valor || MI_PERSONA;
+  cont.style.display = 'block';
+  cont.dataset.valor = valorPrevio;
+  cont.innerHTML = '<label style="display:block; font-size:12px; color:var(--text-dim); margin:8px 0 6px;">¿Quién pagó esto en efectivo/transferencia? (sin esto se asume que fuiste tú)</label>' +
+    '<div class="chip-row">' + getNombresMiembros().map(n => '<div class="chip small'+(n===valorPrevio?' active':'')+'" onclick="elegirPagador(\''+containerId+'\', this)">'+n+'</div>').join('') + '</div>';
+}
+function elegirPagador(containerId, el){
+  const cont = document.getElementById(containerId);
+  cont.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  cont.dataset.valor = el.textContent;
+}
+function leerPagador(containerId){
+  const cont = document.getElementById(containerId);
+  if (!cont || cont.style.display === 'none') return MI_PERSONA;
+  const activo = cont.querySelector('.chip.active');
+  return activo ? activo.textContent : (cont.dataset.valor || MI_PERSONA);
 }
 
 // ---------- VISTA ----------
@@ -1661,6 +1699,7 @@ function renderInicio(){
   document.getElementById('gastoMes').textContent = '↓ Gastos S/' + gastos.toFixed(2);
 
   renderTarjetasResumen();
+  renderAvisosLimiteTarjeta();
   renderPresupuestosResumen(delMes);
   renderProyeccionFinMes(delMes, now);
   renderGastoHormiga(delMes);
@@ -1821,6 +1860,7 @@ function renderTarjetasResumen(){
     const usado = Number(uso.usado || 0);
     const limite = Number(t.limite||0);
     const pct = limite > 0 ? Math.min(100,(usado/limite)*100) : 0;
+    const pctReal = limite > 0 ? (usado/limite)*100 : 0; // sin tope en 100, para saber si ya se pasó y por cuánto
     const color = t.color || PALETA_TARJETAS[0];
     const ciclo = calcularCicloTarjeta(t);
     const cicloTxt = ciclo
@@ -1833,14 +1873,46 @@ function renderTarjetasResumen(){
     const interesTxt = (tasaInteres > 0 && uso.arrastrado > 0)
       ? '<div class="tv-ciclo">🔥 Si no pagas el arrastre, ~S/'+(uso.arrastrado * tasaInteres/100).toFixed(2)+' de interés este ciclo ('+tasaInteres+'%/mes)</div>'
       : '';
+    // Aviso de límite DIRECTO en la tarjeta (antes solo se veía si simulabas
+    // una compra nueva en el Asesor/Simulador) — ahora es visible siempre,
+    // sin tener que ir a buscarlo.
+    const limiteTxt = (limite > 0 && pctReal >= 100)
+      ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.25); border-radius:8px; padding:4px 8px; display:inline-block;">🚨 Límite superado por S/'+(usado-limite).toFixed(2)+'</div>'
+      : (limite > 0 && pctReal >= 85)
+        ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.2); border-radius:8px; padding:4px 8px; display:inline-block;">⚠️ Cerca del límite ('+pctReal.toFixed(0)+'% usado)</div>'
+        : '';
     return '<div class="tarjeta-visual" style="background:linear-gradient(135deg, '+color+', '+oscurecerColor(color,0.35)+')">' +
       '<div class="tv-top"><span>'+t.nombre+'</span><span class="tv-dueno">de '+t.propietario+'</span></div>' +
       '<div class="tv-numero">•••• •••• •••• ••••</div>' +
       '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:#ffffff;"></div></div>' +
-      cicloTxt + desgloseTxt + interesTxt +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+(pctReal>=100?'#ef4444':pctReal>=85?'#fbbf24':'#ffffff')+';"></div></div>' +
+      limiteTxt + cicloTxt + desgloseTxt + interesTxt +
       '<button class="tv-estado-btn" onclick="abrirEstadoCuentaTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">📄 Ver estado de cuenta</button>' +
       '</div>';
+  }).join('');
+}
+// Alerta proactiva en Inicio: mismo espíritu que "🔔 Por vencer" de
+// suscripciones, pero para tarjetas cerca de su límite (≥85%) o ya
+// excedidas. Antes esto solo se veía si ibas a simular una compra nueva —
+// ahora aparece solo con abrir la app, sin tener que ir a buscarlo.
+function renderAvisosLimiteTarjeta(){
+  const wrapCard = document.getElementById('avisosLimiteTarjetaWrap');
+  const wrap = document.getElementById('avisosLimiteTarjeta');
+  const enRiesgo = getTarjetasActivas().map(t => {
+    const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
+    const usado = Number(uso.usado || 0);
+    const limite = Number(t.limite||0);
+    const pct = limite > 0 ? (usado/limite)*100 : 0;
+    return { t, usado, limite, pct };
+  }).filter(x => x.limite > 0 && x.pct >= 85).sort((a,b) => b.pct - a.pct);
+
+  if (!enRiesgo.length){ wrapCard.style.display = 'none'; return; }
+  wrapCard.style.display = 'block';
+  wrap.innerHTML = enRiesgo.map(x => {
+    const excedido = x.pct >= 100;
+    return '<div class="mov-item"><div class="mov-left"><div class="mov-icon">'+(excedido?'🚨':'⚠️')+'</div><div>' +
+      '<div class="mov-desc">'+x.t.nombre+' (de '+x.t.propietario+')</div>' +
+      '<div class="mov-meta">S/'+x.usado.toFixed(2)+' de S/'+x.limite.toFixed(2)+' · '+x.pct.toFixed(0)+'% usado'+(excedido?' — LÍMITE SUPERADO':'')+'</div></div></div></div>';
   }).join('');
 }
 
@@ -2369,10 +2441,12 @@ function renderFormOpciones(){
   renderMetodoPicker('fMetodoPicker', tipoActual, null, (valor) => {
     actualizarAvisoTarjetaAjena(valor);
     if (modoDivisionActivo('f') !== 'mio') renderCompartirMiembros('f');
+    renderPagadorPicker('fPagadorPicker', valor);
   });
   document.getElementById('compartirWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   document.getElementById('cuotasWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   actualizarAvisoTarjetaAjena(leerMetodoPicker('fMetodoPicker'));
+  renderPagadorPicker('fPagadorPicker', leerMetodoPicker('fMetodoPicker'));
   renderSimuladorOpciones();
 }
 // "Otros"/"Otro" no tiene subcategorías propias en la lista de categorías —
@@ -2710,6 +2784,7 @@ function guardarMovimiento(){
   const fechaTexto = document.getElementById('fFecha').value;
   const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
   const tags = document.getElementById('fTags').value.trim();
+  const pagador = leerPagador('fPagadorPicker');
   let compartido = [];
   if (tipoActual === 'Gasto' && modoDivisionActivo('f') !== 'mio'){
     compartido = leerCompartidoSeleccionado('f');
@@ -2718,8 +2793,8 @@ function guardarMovimiento(){
   const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
   const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
   const payload = esCuotas
-    ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido, fechaInicio: fecha, tags }
-    : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido, fecha, tags };
+    ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido, fechaInicio: fecha, tags, pagador }
+    : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido, fecha, tags, pagador };
   postData(accion, payload).then(res => {
     if (res.error) return;
     showToast(esCuotas ? 'Cuotas registradas ✅' : 'Registrado ✅');
@@ -2727,6 +2802,7 @@ function guardarMovimiento(){
     document.getElementById('fDescripcion').value = '';
     document.getElementById('fTags').value = getTagFijado();
     document.getElementById('fFecha').value = new Date().toISOString().slice(0,10);
+    document.getElementById('fPagadorPicker').dataset.valor = MI_PERSONA;
     elegirDivisionMovimiento('f', 'mio');
     document.getElementById('fCuotas').checked = false;
     toggleCuotas();
@@ -2855,7 +2931,8 @@ function procesarComandoVoz(texto){
     setTipo(res.tipo || 'Gasto');
     const catsWrap = document.getElementById('fCategorias');
     catsWrap.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.textContent === res.categoria));
-    renderMetodoPicker('fMetodoPicker', tipoActual, res.metodo, (valor) => { actualizarAvisoTarjetaAjena(valor); if (modoDivisionActivo('f') !== 'mio') renderCompartirMiembros('f'); });
+    renderMetodoPicker('fMetodoPicker', tipoActual, res.metodo, (valor) => { actualizarAvisoTarjetaAjena(valor); if (modoDivisionActivo('f') !== 'mio') renderCompartirMiembros('f'); renderPagadorPicker('fPagadorPicker', valor); });
+    renderPagadorPicker('fPagadorPicker', res.metodo);
     actualizarAvisoTarjetaAjena(res.metodo);
     document.getElementById('fDescripcion').value = res.descripcion || '';
     if (res.monto){ document.getElementById('fMonto').value = res.monto; previsualizarCuota(); }
@@ -3632,9 +3709,15 @@ function abrirFinalizarCompra(){
     (sinAsignar.length ? ' · ⚠️ ' + sinAsignar.length + ' sin asignar todavía (quedarán como tuyos)' : '');
   document.getElementById('finalizarFoto').value = '';
 
-  renderMetodoPicker('finalizarMetodosPicker', 'Gasto', null, () => {});
+  document.getElementById('finalizarPagadorSuper').dataset.valor = MI_PERSONA;
+  document.getElementById('finalizarPagadorTransporte').dataset.valor = MI_PERSONA;
+  renderMetodoPicker('finalizarMetodosPicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorSuper', valor));
+  renderPagadorPicker('finalizarPagadorSuper', leerMetodoPicker('finalizarMetodosPicker'));
   document.getElementById('finalizarTransporteWrap').style.display = productosTransporte.length ? 'block' : 'none';
-  if (productosTransporte.length) renderMetodoPicker('finalizarMetodosTransportePicker', 'Gasto', null, () => {});
+  if (productosTransporte.length){
+    renderMetodoPicker('finalizarMetodosTransportePicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorTransporte', valor));
+    renderPagadorPicker('finalizarPagadorTransporte', leerMetodoPicker('finalizarMetodosTransportePicker'));
+  }
 
   abrirModal('modalFinalizarCompra');
 }
@@ -3642,8 +3725,10 @@ function confirmarFinalizarCompra(){
   const metodo = leerMetodoPicker('finalizarMetodosPicker');
   const hayTransporte = document.getElementById('finalizarTransporteWrap').style.display !== 'none';
   const metodoTransporte = hayTransporte ? leerMetodoPicker('finalizarMetodosTransportePicker') : undefined;
+  const pagadorSuper = leerPagador('finalizarPagadorSuper');
+  const pagadorTransporte = hayTransporte ? leerPagador('finalizarPagadorTransporte') : undefined;
   const archivo = document.getElementById('finalizarFoto').files[0];
-  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, metodoTransporte, persona: MI_PERSONA }).then(res => {
+  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, metodoTransporte, persona: MI_PERSONA, pagadorSuper, pagadorTransporte }).then(res => {
     if (!res.success) return;
     showToast('Compra finalizada ✅ Gasto de S/' + Number(res.total).toFixed(2) + ' registrado');
     cerrarModal('modalFinalizarCompra');
@@ -3963,10 +4048,6 @@ function abrirEditarMovimiento(id){
     catsWrap.appendChild(div);
   });
 
-  renderMetodoPicker('emMetodoPicker', m.Tipo, m.Metodo, () => {
-    if (modoDivisionActivo('em') !== 'mio') renderCompartirMiembros('em');
-  });
-
   const esGasto = m.Tipo === 'Gasto';
   document.getElementById('emCompartirWrap').style.display = esGasto ? 'block' : 'none';
   const deudasDelMov = esGasto ? state.deudas.filter(d => d.MovimientoID === id) : [];
@@ -3974,6 +4055,16 @@ function abrirEditarMovimiento(id){
   document.querySelectorAll('#emDivisionModo .chip').forEach(c => c.classList.toggle('active', c.dataset.modo===modoInicial));
   document.getElementById('emCompartirPicker').style.display = deudasDelMov.length > 0 ? 'block' : 'none';
   if (esGasto) renderCompartirMiembros('em', deudasDelMov.map(d => d.Persona));
+  // Reconstruye quién pagó a partir de la deuda ya guardada (su Acreedor es
+  // justamente eso) — si no hay deudas registradas para este movimiento
+  // (porque nadie le debe a nadie por él), no hay forma de saber quién
+  // pagó y se asume que fuiste tú, como con un movimiento nuevo.
+  document.getElementById('emPagadorPicker').dataset.valor = deudasDelMov.length ? deudasDelMov[0].Acreedor : MI_PERSONA;
+  renderMetodoPicker('emMetodoPicker', m.Tipo, m.Metodo, (valor) => {
+    if (modoDivisionActivo('em') !== 'mio') renderCompartirMiembros('em');
+    renderPagadorPicker('emPagadorPicker', valor);
+  });
+  renderPagadorPicker('emPagadorPicker', m.Metodo);
 
   abrirModal('modalEditarMovimiento');
 }
@@ -3988,6 +4079,7 @@ function guardarEdicionMovimiento(){
   if (!monto || monto <= 0){ showToast('Ingresa un monto válido'); return; }
   const descripcion = document.getElementById('emDescripcion').value;
   const tags = document.getElementById('emTags').value.trim();
+  const pagador = leerPagador('emPagadorPicker');
   const fechaTexto = document.getElementById('emFecha').value;
   const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : m.Fecha;
 
@@ -3997,7 +4089,7 @@ function guardarEdicionMovimiento(){
     if (!compartidoCalzaConMonto(compartido, monto)) return;
   }
 
-  postData('updateMovimiento', { id: movimientoEditandoId, categoria, metodo, monto, descripcion, fecha, compartido, tags }).then(res => {
+  postData('updateMovimiento', { id: movimientoEditandoId, categoria, metodo, monto, descripcion, fecha, compartido, tags, pagador }).then(res => {
     if (res.error) return;
     showToast('Movimiento actualizado ✅');
     cerrarModal('modalEditarMovimiento');
