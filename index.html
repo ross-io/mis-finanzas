@@ -201,7 +201,7 @@
   .metodo-picker.modo-pago .mp-toggle{color:var(--accent2); border-color:rgba(251,146,60,.4); background:rgba(251,146,60,.08);}
   .metodo-picker .mp-hint{font-size:11px; color:var(--text-dim); margin:-6px 0 10px;}
 
-  /* ---------- CALENDARIO ---------- */
+  /* ---------- CALENDARIO: PAGOS Y COMPRAS ---------- */
   .cal-card{overflow:hidden;}
   .cal-header{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:16px;}
   .cal-heading{min-width:0;}
@@ -209,7 +209,7 @@
   .cal-titulo{font-weight:850; font-size:24px; line-height:1.1; text-transform:capitalize;}
   .cal-subtitulo{font-size:12px; color:var(--text-dim); margin-top:5px;}
   .cal-nav{display:flex; gap:6px; flex-shrink:0;}
-  .cal-nav button{background:var(--card2); border:1px solid var(--border); border-radius:11px; min-width:38px; height:38px; padding:0 11px; font-size:15px; font-weight:700; cursor:pointer; color:var(--text); transition:transform .16s, border-color .16s, background .16s;}
+  .cal-nav button{background:var(--card2); border:1px solid var(--border); border-radius:11px; min-width:38px; height:38px; padding:0 11px; font-size:15px; font-weight:700; cursor:pointer; color:var(--text); transition:transform .16s,border-color .16s,background .16s;}
   .cal-nav button:hover{transform:translateY(-1px); border-color:var(--accent);}
   .cal-nav .cal-hoy{width:auto; color:var(--accent);}
 
@@ -219,13 +219,14 @@
   .cal-stat div{min-width:0;}
   .cal-stat b{display:block; font-size:15px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .cal-stat small{display:block; color:var(--text-dim); font-size:10px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .cal-stat-proximo{background:linear-gradient(135deg, rgba(20,184,166,.13), rgba(45,212,191,.04)); border-color:rgba(20,184,166,.28);}
+  .cal-stat-proximo{background:linear-gradient(135deg,rgba(20,184,166,.13),rgba(45,212,191,.04)); border-color:rgba(20,184,166,.28);}
 
   .cal-layout{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,.72fr); gap:14px; align-items:start;}
   .cal-main{min-width:0;}
   .cal-grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px;}
   .cal-diasemana{font-size:10px; text-align:center; color:var(--text-dim); font-weight:800; padding:4px 0 6px; letter-spacing:.04em;}
-  .cal-day{min-width:0; min-height:82px; border-radius:14px; background:var(--card2); border:1px solid transparent; padding:7px; font-size:11px; position:relative; cursor:pointer; display:flex; flex-direction:column; overflow:hidden; transition:transform .16s, border-color .16s, background .16s, box-shadow .16s; outline:none;}
+
+  .cal-day{min-width:0; min-height:82px; border-radius:14px; background:var(--card2); border:1px solid transparent; padding:7px; font-size:11px; position:relative; cursor:pointer; display:flex; flex-direction:column; overflow:hidden; transition:transform .16s,border-color .16s,background .16s,box-shadow .16s; outline:none;}
   .cal-day:hover{transform:translateY(-1px); border-color:var(--border); box-shadow:0 5px 14px rgba(30,36,60,.06);}
   .cal-day.otro-mes{opacity:.28; cursor:default; box-shadow:none; transform:none;}
   .cal-day.hoy{border-color:rgba(20,184,166,.5);}
@@ -235,6 +236,7 @@
   .cal-day .cal-num{font-weight:800; font-size:12px; line-height:1;}
   .cal-day.hoy .cal-num{display:grid; place-items:center; width:22px; height:22px; border-radius:8px; background:var(--accent); color:var(--accent-ink);}
   .cal-count{display:grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--card); border:1px solid var(--border); color:var(--text-dim); font-size:9px; font-weight:800;}
+
   .cal-mini-list{display:flex; flex-direction:column; gap:3px; min-width:0;}
   .cal-mini-event{display:block; min-width:0; padding:3px 5px 3px 8px; border-radius:6px; background:var(--card); color:var(--text-dim); font-size:9px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative;}
   .cal-mini-event::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--evento-color);}
@@ -252,13 +254,16 @@
   .cal-detalle-head > div{min-width:0;}
   .cal-detalle-head span{display:block; color:var(--text-dim); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;}
   .cal-detalle-head b{display:block; margin-top:2px; font-size:14px; text-transform:capitalize;}
-  .cal-evento-item{display:flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--evento-color); border-radius:12px; padding:10px; margin-top:7px;}
+
+  .cal-evento-item{display:flex; align-items:flex-start; gap:9px; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--evento-color); border-radius:12px; padding:10px; margin-top:7px;}
   .cal-evento-icono{width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:var(--card2); flex-shrink:0;}
   .cal-evento-info{min-width:0; flex:1;}
-  .cal-evento-info b{display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .cal-evento-info small{display:block; color:var(--text-dim); font-size:10px; margin-top:3px; line-height:1.25;}
+  .cal-evento-info b{display:block; font-size:12px;}
+  .cal-evento-info small{display:block; color:var(--text-dim); font-size:10px; margin-top:3px; line-height:1.35;}
   .cal-evento-monto{font-size:12px; white-space:nowrap; color:var(--danger);}
-  .cal-evento-monto.cobrar{color:var(--good);}
+  .cal-evento-monto.compra{color:var(--text);}
+  .cal-evento-accion{width:auto; margin-top:7px; padding:7px 9px; font-size:11px;}
+
   .cal-empty-day{display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 10px 12px; color:var(--text-dim);}
   .cal-empty-day > span{font-size:26px; margin-bottom:5px;}
   .cal-empty-day b{font-size:13px; color:var(--text);}
@@ -720,7 +725,7 @@
         <div class="cal-heading">
           <span class="cal-kicker">Agenda financiera</span>
           <div class="cal-titulo" id="calTitulo"></div>
-          <div class="cal-subtitulo" id="calSubtitulo"></div>
+          <div class="cal-subtitulo" id="calSubtitulo">Consulta qué debes pagar y qué compró la familia</div>
         </div>
         <div class="cal-nav">
           <button type="button" onclick="calMoverMes(-1)" aria-label="Mes anterior">‹</button>
@@ -735,10 +740,11 @@
         <div class="cal-main">
           <div class="cal-grid" id="calGrid"></div>
           <div class="cal-leyenda">
-            <span><span class="cal-dot" style="background:var(--danger)"></span>Cierre de tarjeta</span>
-            <span><span class="cal-dot" style="background:var(--warn)"></span>Suscripción/servicio</span>
-            <span><span class="cal-dot" style="background:var(--accent2)"></span>Cuota</span>
-            <span><span class="cal-dot" style="background:var(--good)"></span>Deuda pendiente</span>
+            <span><span class="cal-dot" style="background:var(--danger)"></span>Fecha límite de tarjeta</span>
+            <span><span class="cal-dot" style="background:var(--warn)"></span>Suscripción o servicio</span>
+            <span><span class="cal-dot" style="background:var(--accent2)"></span>Cuota por pagar</span>
+            <span><span class="cal-dot" style="background:var(--accent)"></span>Compra realizada</span>
+            <span><span class="cal-dot" style="background:#8b5cf6"></span>Cierre de tarjeta</span>
           </div>
         </div>
 
@@ -2436,332 +2442,261 @@ function renderComparador(){
   document.getElementById('comparadorResultado').innerHTML = html;
 }
 
-// ---------- CALENDARIO DE PAGOS Y COBROS ----------
+// ---------- CALENDARIO: PAGOS Y COMPRAS ----------
 let calFechaActual = new Date();
 let calFechaSeleccionada = '';
 
 function calKey(fecha){
-  return fecha.getFullYear() + '-' +
-    String(fecha.getMonth() + 1).padStart(2, '0') + '-' +
-    String(fecha.getDate()).padStart(2, '0');
+  return fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0') + '-' + String(fecha.getDate()).padStart(2,'0');
 }
-
 function calEsc(valor){
   return String(valor == null ? '' : valor)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
-
+function calFechaLocal(valor){
+  if (!valor) return null;
+  const texto = String(valor);
+  const soloFecha = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (soloFecha) return new Date(Number(soloFecha[1]), Number(soloFecha[2])-1, Number(soloFecha[3]), 12, 0, 0);
+  const fecha = new Date(valor);
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
 function calMoverMes(n){
-  calFechaActual = new Date(
-    calFechaActual.getFullYear(),
-    calFechaActual.getMonth() + n,
-    1
-  );
+  calFechaActual = new Date(calFechaActual.getFullYear(), calFechaActual.getMonth()+n, 1);
   calFechaSeleccionada = '';
   renderCalendario();
 }
-
 function calIrHoy(){
   calFechaActual = new Date();
   calFechaSeleccionada = calKey(new Date());
   renderCalendario();
 }
+function calFechaCierreTarjeta(tarjeta, anio, mes){
+  const diaConfigurado = Number(tarjeta.diaCierre || 0);
+  if (!diaConfigurado) return null;
+  const ultimoDia = new Date(anio, mes+1, 0).getDate();
+  return new Date(anio, mes, Math.min(Math.max(1,diaConfigurado), ultimoDia), 12, 0, 0);
+}
 
+// Solo incluye compromisos reales y compras del módulo Compras.
+// Los gastos normales continúan exclusivamente en Historial.
 function eventosDelMes(anio, mes){
   const eventos = {};
-  const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+  const ultimoDiaVisible = new Date(anio, mes+1, 0).getDate();
+  const mesVisible = anio + '-' + String(mes+1).padStart(2,'0');
 
   function agregar(fecha, evento){
     if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return;
+    if (fecha.getFullYear() !== anio || fecha.getMonth() !== mes) return;
     const key = calKey(fecha);
     if (!eventos[key]) eventos[key] = [];
     eventos[key].push(evento);
   }
 
-  getTarjetas().forEach(t => {
-    const diaConfigurado = Number(t.diaCierre);
-    if (!diaConfigurado) return;
-    const dia = Math.min(Math.max(1, diaConfigurado), ultimoDia);
-    agregar(new Date(anio, mes, dia), {
-      tipo: 'cierre',
-      icono: '💳',
-      titulo: 'Cierre de ' + t.nombre,
-      detalle: 'Tarjeta de ' + t.propietario,
-      color: 'var(--danger)',
-      monto: 0,
-      sentido: ''
-    });
+  // Cierre del ciclo y fecha límite estimada de pago de cada tarjeta activa.
+  getTarjetasActivas().forEach(tarjeta => {
+    const cierreVisible = calFechaCierreTarjeta(tarjeta, anio, mes);
+    if (cierreVisible){
+      agregar(cierreVisible, {
+        tipo:'cierre', icono:'✂️', titulo:'Cierra ' + tarjeta.nombre,
+        detalle:'Tarjeta de ' + tarjeta.propietario + ' · las compras posteriores pasan al siguiente ciclo',
+        color:'#8b5cf6', monto:0, sentido:'informativo', tarjetaNombre:tarjeta.nombre
+      });
+    }
+
+    // Busca cierres anteriores cuya fecha límite cae dentro del mes visible.
+    for (let retroceso=3; retroceso>=0; retroceso--){
+      const base = new Date(anio, mes-retroceso, 1, 12, 0, 0);
+      const cierre = calFechaCierreTarjeta(tarjeta, base.getFullYear(), base.getMonth());
+      if (!cierre) continue;
+      const fechaPago = new Date(cierre);
+      fechaPago.setDate(fechaPago.getDate() + (Number(tarjeta.diasParaPago) || 20));
+      agregar(fechaPago, {
+        tipo:'pagoTarjeta', icono:'💳', titulo:'Fecha límite: ' + tarjeta.nombre,
+        detalle:'Tarjeta de ' + tarjeta.propietario + ' · revisa el estado de cuenta antes de pagar',
+        color:'var(--danger)', monto:0, sentido:'pagar', tarjetaNombre:tarjeta.nombre
+      });
+    }
   });
 
+  // Servicios y suscripciones recurrentes del usuario actual.
   misSuscripcionesActivas().forEach(s => {
-    const dia = Math.min(Math.max(1, Number(s.DiaPago) || 1), ultimoDia);
-    agregar(new Date(anio, mes, dia), {
-      tipo: 'suscripcion',
-      icono: '🔁',
-      titulo: s.Nombre,
-      detalle: 'Suscripción · ' + (s.Metodo || 'Método no indicado'),
-      color: 'var(--warn)',
-      monto: Number(s.Monto || 0),
-      sentido: 'pagar'
+    const dia = Math.min(Math.max(1, Number(s.DiaPago) || 1), ultimoDiaVisible);
+    const pagada = String(s.UltimoPagoMes || '') === mesVisible;
+    agregar(new Date(anio, mes, dia, 12, 0, 0), {
+      tipo:'suscripcion', icono:'🔁', titulo:s.Nombre,
+      detalle:(pagada ? 'Pagada este mes ✅ · ' : 'Pago recurrente · ') + (s.Metodo || 'método no indicado'),
+      color:'var(--warn)', monto:Number(s.Monto || 0), sentido:'pagar'
     });
   });
 
+  // Cuotas: sí usan movimientos, porque cada registro representa una fecha real de cuota.
   const cuotasPorGrupo = {};
-  state.movimientos
-    .filter(m => m.Persona === MI_PERSONA && m.CuotaGrupoID)
-    .forEach(m => {
-      if (!cuotasPorGrupo[m.CuotaGrupoID]) cuotasPorGrupo[m.CuotaGrupoID] = [];
-      cuotasPorGrupo[m.CuotaGrupoID].push(m);
-    });
-
+  state.movimientos.filter(m => m.Persona === MI_PERSONA && m.CuotaGrupoID).forEach(m => {
+    if (!cuotasPorGrupo[m.CuotaGrupoID]) cuotasPorGrupo[m.CuotaGrupoID] = [];
+    cuotasPorGrupo[m.CuotaGrupoID].push(m);
+  });
   Object.values(cuotasPorGrupo).forEach(grupo => {
-    grupo.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
-    grupo.forEach((m, indice) => {
-      const fecha = new Date(m.Fecha);
-      if (fecha.getFullYear() !== anio || fecha.getMonth() !== mes) return;
+    grupo.sort((a,b) => new Date(a.Fecha) - new Date(b.Fecha));
+    grupo.forEach((movimiento, indice) => {
+      const fecha = calFechaLocal(movimiento.Fecha);
+      if (!fecha) return;
       agregar(fecha, {
-        tipo: 'cuota',
-        icono: '🧾',
-        titulo: m.Descripcion || m.Categoria || 'Compra en cuotas',
-        detalle: (m.Metodo || 'Método no indicado') + ' · cuota ' + (indice + 1) + '/' + grupo.length,
-        color: 'var(--accent2)',
-        monto: Number(m.Monto || 0),
-        sentido: 'pagar'
+        tipo:'cuota', icono:'🧾',
+        titulo:movimiento.Descripcion || movimiento.Categoria || 'Compra en cuotas',
+        detalle:(movimiento.Metodo || 'método no indicado') + ' · cuota ' + (indice+1) + '/' + grupo.length,
+        color:'var(--accent2)', monto:Number(movimiento.Monto || 0), sentido:'pagar'
       });
     });
   });
 
-  state.deudas
-    .filter(d => d.Estado !== 'Pagado' && (d.Persona === MI_PERSONA || d.Acreedor === MI_PERSONA))
-    .forEach(d => {
-      const fecha = new Date(d.Fecha);
-      if (Number.isNaN(fecha.getTime()) || fecha.getFullYear() !== anio || fecha.getMonth() !== mes) return;
-
-      const saldo = Number(d.MontoDebe || 0) - Number(d.MontoPagado || 0);
-      if (saldo <= 0) return;
-
-      const meDeben = d.Acreedor === MI_PERSONA;
-      agregar(fecha, {
-        tipo: 'deuda',
-        icono: meDeben ? '📥' : '📤',
-        titulo: meDeben ? d.Persona + ' te debe' : 'Le debes a ' + d.Acreedor,
-        detalle: (d.Descripcion || 'Deuda pendiente') + ' · registrada en esta fecha',
-        color: 'var(--good)',
-        monto: saldo,
-        sentido: meDeben ? 'cobrar' : 'pagar'
-      });
+  // Compras finalizadas y sus productos. No toma gastos normales del historial.
+  state.compras.filter(c => c.Estado === 'Cerrada').forEach(compra => {
+    const fecha = calFechaLocal(compra.Fecha);
+    if (!fecha) return;
+    const productos = state.productosCompra.filter(p => p.CompraID === compra.ID);
+    const total = productos.reduce((s,p) => s + Number(p.MontoTotal || 0), 0);
+    const nombres = productos.map(p => p.Producto).filter(Boolean);
+    let detalle = nombres.slice(0,3).join(', ');
+    if (nombres.length > 3) detalle += ' y ' + (nombres.length-3) + ' más';
+    if (!detalle) detalle = productos.length + ' producto(s)';
+    detalle += ' · comprado por ' + (compra.Persona || 'la familia');
+    agregar(fecha, {
+      tipo:'compra', icono:'🛒', titulo:compra.Nombre || 'Compra de supermercado',
+      detalle, color:'var(--accent)', monto:total, sentido:'compra', compraId:compra.ID
     });
+  });
 
+  // Las deudas no se colocan usando su fecha de creación, porque esa fecha no es un vencimiento.
   Object.keys(eventos).forEach(key => {
-    eventos[key].sort((a, b) => {
-      const orden = { cierre: 1, suscripcion: 2, cuota: 3, deuda: 4 };
-      return (orden[a.tipo] || 99) - (orden[b.tipo] || 99);
-    });
+    const orden = { pagoTarjeta:1, suscripcion:2, cuota:3, compra:4, cierre:5 };
+    eventos[key].sort((a,b) => (orden[a.tipo] || 99) - (orden[b.tipo] || 99));
   });
-
   return eventos;
 }
 
 function calEventosOrdenados(eventos){
-  return Object.keys(eventos).sort().flatMap(key =>
-    eventos[key].map(evento => ({ key, evento }))
-  );
+  return Object.keys(eventos).sort().flatMap(key => eventos[key].map(evento => ({key, evento})));
 }
-
 function calElegirFechaInicial(eventos, anio, mes){
-  const prefijoMes = anio + '-' + String(mes + 1).padStart(2, '0') + '-';
-  if (calFechaSeleccionada.indexOf(prefijoMes) === 0) return calFechaSeleccionada;
-
+  const prefijo = anio + '-' + String(mes+1).padStart(2,'0') + '-';
+  if (calFechaSeleccionada.indexOf(prefijo) === 0) return calFechaSeleccionada;
   const hoy = new Date();
-  if (hoy.getFullYear() === anio && hoy.getMonth() === mes){
-    return calKey(hoy);
-  }
-
-  const primeraFechaConEvento = Object.keys(eventos).sort()[0];
-  return primeraFechaConEvento || prefijoMes + '01';
+  if (hoy.getFullYear() === anio && hoy.getMonth() === mes) return calKey(hoy);
+  return Object.keys(eventos).sort()[0] || prefijo + '01';
 }
-
-function renderResumenCalendario(eventos){
+function renderResumenCalendario(eventos, anio, mes){
   const lista = calEventosOrdenados(eventos);
-  const pagosProgramados = lista
-    .filter(x => x.evento.sentido === 'pagar' && (x.evento.tipo === 'suscripcion' || x.evento.tipo === 'cuota'))
-    .reduce((s, x) => s + Number(x.evento.monto || 0), 0);
-  const porCobrar = lista
-    .filter(x => x.evento.sentido === 'cobrar')
-    .reduce((s, x) => s + Number(x.evento.monto || 0), 0);
-
-  const hoyKey = calKey(new Date());
-  const proximo = lista.find(x => x.key >= hoyKey) || null;
-  let proximoValor = 'Sin pendientes';
-  let proximoMeta = 'Nada próximo en este mes';
-
+  const pagos = lista.filter(x => ['pagoTarjeta','suscripcion','cuota'].includes(x.evento.tipo));
+  const compras = lista.filter(x => x.evento.tipo === 'compra');
+  const pagosConMonto = pagos.reduce((s,x) => s + Number(x.evento.monto || 0), 0);
+  const totalComprado = compras.reduce((s,x) => s + Number(x.evento.monto || 0), 0);
+  const hoy = new Date();
+  const esMesPasado = new Date(anio, mes+1, 0, 23,59,59) < hoy;
+  const desde = (hoy.getFullYear() === anio && hoy.getMonth() === mes) ? calKey(hoy) : anio + '-' + String(mes+1).padStart(2,'0') + '-01';
+  const proximo = esMesPasado ? null : (pagos.find(x => x.key >= desde) || null);
+  let proximoValor = 'Sin pagos';
+  let proximoMeta = esMesPasado ? 'Mes ya finalizado' : 'Nada pendiente en este mes';
   if (proximo){
     const fecha = new Date(proximo.key + 'T12:00:00');
-    proximoValor = fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+    proximoValor = fecha.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
     proximoMeta = proximo.evento.titulo;
   }
-
   document.getElementById('calResumen').innerHTML =
-    '<div class="cal-stat"><span class="cal-stat-icon">🗓️</span><div><b>' + lista.length + '</b><small>eventos del mes</small></div></div>' +
-    '<div class="cal-stat"><span class="cal-stat-icon">💸</span><div><b>S/' + pagosProgramados.toFixed(2) + '</b><small>pagos programados</small></div></div>' +
-    '<div class="cal-stat"><span class="cal-stat-icon">📥</span><div><b>S/' + porCobrar.toFixed(2) + '</b><small>por cobrar</small></div></div>' +
-    '<div class="cal-stat cal-stat-proximo"><span class="cal-stat-icon">⏭️</span><div><b>' + calEsc(proximoValor) + '</b><small>' + calEsc(proximoMeta) + '</small></div></div>';
+    '<div class="cal-stat"><span class="cal-stat-icon">⏰</span><div><b>'+pagos.length+'</b><small>pagos del mes</small></div></div>' +
+    '<div class="cal-stat"><span class="cal-stat-icon">💸</span><div><b>S/'+pagosConMonto.toFixed(2)+'</b><small>cuotas y servicios</small></div></div>' +
+    '<div class="cal-stat"><span class="cal-stat-icon">🛒</span><div><b>'+compras.length+'</b><small>compras · S/'+totalComprado.toFixed(2)+'</small></div></div>' +
+    '<div class="cal-stat cal-stat-proximo"><span class="cal-stat-icon">⏭️</span><div><b>'+calEsc(proximoValor)+'</b><small>'+calEsc(proximoMeta)+'</small></div></div>';
 }
 
 function renderCalendario(){
-  const anio = calFechaActual.getFullYear();
-  const mes = calFechaActual.getMonth();
+  const anio = calFechaActual.getFullYear(), mes = calFechaActual.getMonth();
+  document.getElementById('calTitulo').textContent = calFechaActual.toLocaleDateString('es-PE',{month:'long',year:'numeric'});
   const eventos = eventosDelMes(anio, mes);
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
-  document.getElementById('calTitulo').textContent =
-    calFechaActual.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
-  document.getElementById('calSubtitulo').textContent =
-    'Tus cierres, cuotas, servicios y deudas en una sola vista';
-
   calFechaSeleccionada = calElegirFechaInicial(eventos, anio, mes);
-  renderResumenCalendario(eventos);
+  renderResumenCalendario(eventos, anio, mes);
 
   const primerDia = new Date(anio, mes, 1);
-  const offset = (primerDia.getDay() + 6) % 7;
-  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-  const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-  let html = diasSemana
-    .map(d => '<div class="cal-diasemana">' + d + '</div>')
-    .join('');
+  const offset = (primerDia.getDay()+6)%7; // lunes primero
+  const diasEnMes = new Date(anio, mes+1, 0).getDate();
+  const diasSemana = ['L','M','X','J','V','S','D'];
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let html = diasSemana.map(d => '<div class="cal-diasemana">'+d+'</div>').join('');
 
   const diasMesAnterior = new Date(anio, mes, 0).getDate();
-  for (let i = offset - 1; i >= 0; i--){
-    html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">' + (diasMesAnterior - i) + '</div></div>';
-  }
+  for (let i=offset-1; i>=0; i--) html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">'+(diasMesAnterior-i)+'</div></div>';
 
-  for (let d = 1; d <= diasEnMes; d++){
+  for (let d=1; d<=diasEnMes; d++){
     const fecha = new Date(anio, mes, d);
     const key = calKey(fecha);
     const evs = eventos[key] || [];
     const esHoy = fecha.getTime() === hoy.getTime();
     const seleccionado = key === calFechaSeleccionada;
-    const clases = [
-      'cal-day',
-      evs.length ? 'tiene-eventos' : '',
-      esHoy ? 'hoy' : '',
-      seleccionado ? 'seleccionado' : ''
-    ].filter(Boolean).join(' ');
-
-    const dots = evs.slice(0, 4)
-      .map(e => '<span class="cal-dot" style="background:' + e.color + '"></span>')
-      .join('');
-
-    const miniEventos = evs.slice(0, 2)
-      .map(e => '<span class="cal-mini-event" style="--evento-color:' + e.color + '">' + calEsc(e.titulo) + '</span>')
-      .join('');
-
-    const extra = evs.length > 2 ? '<span class="cal-extra">+' + (evs.length - 2) + '</span>' : '';
-    const etiqueta = evs.length
-      ? d + ', ' + evs.length + ' evento' + (evs.length === 1 ? '' : 's')
-      : String(d);
-
-    html += '<div class="' + clases + '" role="button" tabindex="0" aria-label="' + etiqueta + '" ' +
-      'onclick="calVerDia(\'' + key + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();calVerDia(\'' + key + '\');}">' +
-      '<div class="cal-day-top"><span class="cal-num">' + d + '</span>' +
-      (evs.length ? '<span class="cal-count">' + evs.length + '</span>' : '') + '</div>' +
-      '<div class="cal-mini-list">' + miniEventos + extra + '</div>' +
-      '<div class="cal-dots">' + dots + '</div>' +
-      '</div>';
+    const clases = ['cal-day', esHoy?'hoy':'', seleccionado?'seleccionado':''].filter(Boolean).join(' ');
+    const dots = evs.slice(0,4).map(e => '<span class="cal-dot" style="background:'+e.color+'"></span>').join('');
+    const mini = evs.slice(0,2).map(e => '<span class="cal-mini-event" style="--evento-color:'+e.color+'">'+calEsc(e.titulo)+'</span>').join('');
+    const extra = evs.length>2 ? '<span class="cal-extra">+'+(evs.length-2)+'</span>' : '';
+    const aria = d + (evs.length ? ', '+evs.length+' evento'+(evs.length===1?'':'s') : ', sin eventos');
+    html += '<div class="'+clases+'" role="button" tabindex="0" aria-label="'+aria+'" onclick="calVerDia(\''+key+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();calVerDia(\''+key+'\');}">' +
+      '<div class="cal-day-top"><span class="cal-num">'+d+'</span>'+(evs.length?'<span class="cal-count">'+evs.length+'</span>':'')+'</div>' +
+      '<div class="cal-mini-list">'+mini+extra+'</div><div class="cal-dots">'+dots+'</div></div>';
   }
 
-  const totalCeldas = offset + diasEnMes;
-  const faltan = (7 - (totalCeldas % 7)) % 7;
-  for (let d = 1; d <= faltan; d++){
-    html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">' + d + '</div></div>';
-  }
-
+  const faltan = (7-((offset+diasEnMes)%7))%7;
+  for (let d=1; d<=faltan; d++) html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">'+d+'</div></div>';
   document.getElementById('calGrid').innerHTML = html;
   window._calEventosMes = eventos;
   renderDetalleDiaCalendario(calFechaSeleccionada);
-  renderAgendaMesCalendario(eventos, anio, mes);
+  renderAgendaMesCalendario(eventos);
 }
-
 function calVerDia(key){
   calFechaSeleccionada = key;
   renderCalendario();
 }
-
 function renderDetalleDiaCalendario(key){
   const wrap = document.getElementById('calEventosDia');
   const eventos = (window._calEventosMes || {})[key] || [];
   const fecha = new Date(key + 'T12:00:00');
-  const fechaTxt = fecha.toLocaleDateString('es-PE', {
-    weekday: 'long', day: '2-digit', month: 'long'
-  });
-
-  let html = '<div class="cal-detalle-head"><div><span>Día seleccionado</span><b>' + calEsc(fechaTxt) + '</b></div>' +
-    '<button class="btn btn-sm btn-secondary" onclick="registrarDesdeCalendario(\'' + key + '\')">+ Registrar</button></div>';
-
+  const fechaTxt = fecha.toLocaleDateString('es-PE',{weekday:'long',day:'2-digit',month:'long'});
+  let html = '<div class="cal-detalle-head"><div><span>Agenda del día</span><b>'+calEsc(fechaTxt)+'</b></div></div>';
   if (!eventos.length){
-    html += '<div class="cal-empty-day"><span>🌤️</span><b>Día libre</b><small>No hay pagos ni cobros registrados para esta fecha.</small></div>';
-    wrap.innerHTML = html;
+    wrap.innerHTML = html + '<div class="cal-empty-day"><span>🌤️</span><b>Sin pagos ni compras</b><small>No hay compromisos financieros para esta fecha.</small></div>';
     return;
   }
-
-  html += eventos.map(e => {
-    const monto = Number(e.monto || 0);
-    const montoHtml = monto > 0
-      ? '<strong class="cal-evento-monto ' + (e.sentido === 'cobrar' ? 'cobrar' : '') + '">' +
-        (e.sentido === 'cobrar' ? '+' : '') + 'S/' + monto.toFixed(2) + '</strong>'
-      : '';
-
-    return '<div class="cal-evento-item" style="--evento-color:' + e.color + '">' +
-      '<div class="cal-evento-icono">' + e.icono + '</div>' +
-      '<div class="cal-evento-info"><b>' + calEsc(e.titulo) + '</b><small>' + calEsc(e.detalle) + '</small></div>' +
-      montoHtml + '</div>';
+  html += eventos.map(evento => {
+    const monto = Number(evento.monto || 0);
+    const montoHtml = monto>0 ? '<strong class="cal-evento-monto '+(evento.tipo==='compra'?'compra':'')+'">S/'+monto.toFixed(2)+'</strong>' : '';
+    let accion = '';
+    if (evento.compraId){
+      accion = '<button type="button" class="btn btn-sm btn-secondary cal-evento-accion" data-compra="'+encodeURIComponent(evento.compraId)+'" onclick="abrirCompraDesdeCalendario(decodeURIComponent(this.dataset.compra))">🛒 Ver compra</button>';
+    } else if (evento.tarjetaNombre){
+      accion = '<button type="button" class="btn btn-sm btn-secondary cal-evento-accion" data-tarjeta="'+encodeURIComponent(evento.tarjetaNombre)+'" onclick="abrirEstadoCuentaTarjeta(decodeURIComponent(this.dataset.tarjeta))">💳 Ver tarjeta</button>';
+    }
+    return '<div class="cal-evento-item" style="--evento-color:'+evento.color+'"><div class="cal-evento-icono">'+evento.icono+'</div>' +
+      '<div class="cal-evento-info"><b>'+calEsc(evento.titulo)+'</b><small>'+calEsc(evento.detalle)+'</small>'+accion+'</div>'+montoHtml+'</div>';
   }).join('');
-
   wrap.innerHTML = html;
 }
-
-function renderAgendaMesCalendario(eventos, anio, mes){
+function renderAgendaMesCalendario(eventos){
   const wrap = document.getElementById('calAgendaMes');
-  const lista = calEventosOrdenados(eventos);
-  const hoy = new Date();
-  const esMesActual = hoy.getFullYear() === anio && hoy.getMonth() === mes;
-  const desde = esMesActual ? calKey(hoy) : anio + '-' + String(mes + 1).padStart(2, '0') + '-01';
-  const visibles = lista.filter(x => x.key >= desde).slice(0, 8);
-
-  if (!visibles.length){
-    wrap.innerHTML = '<div class="cal-agenda-vacia">No quedan eventos para mostrar en este mes.</div>';
-    return;
-  }
-
-  wrap.innerHTML = visibles.map(({ key, evento }) => {
-    const fecha = new Date(key + 'T12:00:00');
-    const dia = fecha.toLocaleDateString('es-PE', { day: '2-digit' });
-    const mesCorto = fecha.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '');
+  const lista = calEventosOrdenados(eventos).slice(0,12);
+  if (!lista.length){ wrap.innerHTML = '<div class="cal-agenda-vacia">No hay pagos ni compras en este mes.</div>'; return; }
+  wrap.innerHTML = lista.map(({key,evento}) => {
+    const fecha = new Date(key+'T12:00:00');
+    const dia = fecha.toLocaleDateString('es-PE',{day:'2-digit'});
+    const mesCorto = fecha.toLocaleDateString('es-PE',{month:'short'}).replace('.','');
     const monto = Number(evento.monto || 0);
-
-    return '<button type="button" class="cal-agenda-item" onclick="calVerDia(\'' + key + '\')">' +
-      '<span class="cal-agenda-fecha"><b>' + dia + '</b><small>' + calEsc(mesCorto) + '</small></span>' +
-      '<span class="cal-agenda-color" style="background:' + evento.color + '"></span>' +
-      '<span class="cal-agenda-info"><b>' + calEsc(evento.titulo) + '</b><small>' + calEsc(evento.detalle) + '</small></span>' +
-      (monto > 0 ? '<strong>' + (evento.sentido === 'cobrar' ? '+' : '') + 'S/' + monto.toFixed(2) + '</strong>' : '') +
-      '</button>';
+    return '<button type="button" class="cal-agenda-item" onclick="calVerDia(\''+key+'\')">' +
+      '<span class="cal-agenda-fecha"><b>'+dia+'</b><small>'+calEsc(mesCorto)+'</small></span>' +
+      '<span class="cal-agenda-color" style="background:'+evento.color+'"></span>' +
+      '<span class="cal-agenda-info"><b>'+calEsc(evento.titulo)+'</b><small>'+calEsc(evento.detalle)+'</small></span>' +
+      (monto>0?'<strong>S/'+monto.toFixed(2)+'</strong>':'') + '</button>';
   }).join('');
 }
-
-function registrarDesdeCalendario(key){
-  const campoFecha = document.getElementById('fFecha');
-  if (campoFecha) campoFecha.value = key;
-  irA('registrar');
-  setTimeout(() => {
-    const registro = document.getElementById('registroUnicoWrap');
-    if (registro) registro.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
+function abrirCompraDesdeCalendario(compraId){
+  irA('compras');
+  abrirDetalleCompra(compraId);
 }
 
 // ---------- FORM REGISTRAR ----------
