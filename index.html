@@ -1099,7 +1099,7 @@ function getMetodos(tipo){
 // duplica la lista de tarjetas en pantalla.
 // state por contenedor: { tipoBase, esPago }
 const metodoPickerState = {};
-function renderMetodoPicker(containerId, tipoMov, seleccionInicial, onChange){
+function renderMetodoPicker(containerId, tipoMov, seleccionInicial, onChange, permitirPago){
   const cont = document.getElementById(containerId);
   if (!cont) return;
   let tarjetas = getTarjetasActivas();
@@ -1122,7 +1122,13 @@ function renderMetodoPicker(containerId, tipoMov, seleccionInicial, onChange){
   const opcionesBase = soloEfectivoTransferencia ? getMetodos(tipoMov) : ['Efectivo'].concat(tarjetas.map(t => t.nombre));
   const chips = opcionesBase.map(m => '<div class="chip small'+(m===(valorBase||opcionesBase[0])?' active':'')+'" data-val="'+m+'" onclick="mpElegir(\''+containerId+'\', this)">'+m+(m!=='Efectivo' && getTarjetas().find(t=>t.nombre===m && t.activa===false)?' (archivada)':'')+'</div>').join('');
 
-  const toggleHtml = (!soloEfectivoTransferencia && tarjetas.length)
+  // El switch "Estoy pagando/abonando la tarjeta" solo tiene sentido cuando
+  // se está registrando un movimiento SUELTO (puede ser un gasto o un pago
+  // a tarjeta). En Finalizar Compra NUNCA aplica — finalizar una compra
+  // siempre es una compra nueva, jamás un pago de tarjeta — así que ahí se
+  // pasa permitirPago=false para no confundir con un control que no hace
+  // nada útil en ese contexto.
+  const toggleHtml = (permitirPago !== false && !soloEfectivoTransferencia && tarjetas.length)
     ? '<div class="mp-toggle"><label class="check" style="margin:0;"><input type="checkbox" id="'+containerId+'_esPago" '+(esPago?'checked':'')+' onclick="mpToggleEsPago(\''+containerId+'\')"> 💳 Estoy pagando/abonando la tarjeta (no es un gasto nuevo)</label></div>'
     : '';
 
@@ -3711,11 +3717,11 @@ function abrirFinalizarCompra(){
 
   document.getElementById('finalizarPagadorSuper').dataset.valor = MI_PERSONA;
   document.getElementById('finalizarPagadorTransporte').dataset.valor = MI_PERSONA;
-  renderMetodoPicker('finalizarMetodosPicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorSuper', valor));
+  renderMetodoPicker('finalizarMetodosPicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorSuper', valor), false);
   renderPagadorPicker('finalizarPagadorSuper', leerMetodoPicker('finalizarMetodosPicker'));
   document.getElementById('finalizarTransporteWrap').style.display = productosTransporte.length ? 'block' : 'none';
   if (productosTransporte.length){
-    renderMetodoPicker('finalizarMetodosTransportePicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorTransporte', valor));
+    renderMetodoPicker('finalizarMetodosTransportePicker', 'Gasto', null, (valor) => renderPagadorPicker('finalizarPagadorTransporte', valor), false);
     renderPagadorPicker('finalizarPagadorTransporte', leerMetodoPicker('finalizarMetodosTransportePicker'));
   }
 
