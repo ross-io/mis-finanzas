@@ -202,22 +202,110 @@
   .metodo-picker .mp-hint{font-size:11px; color:var(--text-dim); margin:-6px 0 10px;}
 
   /* ---------- CALENDARIO ---------- */
-  .cal-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
-  .cal-header .cal-nav{display:flex; gap:6px;}
-  .cal-header button{background:var(--card2); border:1px solid var(--border); border-radius:10px; width:34px; height:34px; font-size:15px; cursor:pointer; color:var(--text);}
-  .cal-titulo{font-weight:800; font-size:15px; text-transform:capitalize;}
-  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
-  .cal-diasemana{font-size:10px; text-align:center; color:var(--text-dim); font-weight:700; padding-bottom:4px;}
-  .cal-day{aspect-ratio:1; border-radius:10px; background:var(--card2); padding:4px; font-size:11px; position:relative; cursor:default; display:flex; flex-direction:column;}
-  .cal-day.otro-mes{opacity:.3;}
-  .cal-day.hoy{outline:2px solid var(--accent);}
-  .cal-day .cal-num{font-weight:700; font-size:11px;}
-  .cal-day .cal-dots{display:flex; flex-wrap:wrap; gap:2px; margin-top:2px;}
-  .cal-dot{width:6px; height:6px; border-radius:50%;}
-  .cal-day.clickable{cursor:pointer;}
-  .cal-leyenda{display:flex; flex-wrap:wrap; gap:10px; font-size:11px; color:var(--text-dim); margin-top:12px;}
-  .cal-leyenda span{display:flex; align-items:center; gap:5px;}
-  .cal-eventos-dia{margin-top:14px; border-top:1px solid var(--border); padding-top:10px;}
+  .cal-card{overflow:hidden;}
+  .cal-header{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:16px;}
+  .cal-heading{min-width:0;}
+  .cal-kicker{display:block; color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px;}
+  .cal-titulo{font-weight:850; font-size:24px; line-height:1.1; text-transform:capitalize;}
+  .cal-subtitulo{font-size:12px; color:var(--text-dim); margin-top:5px;}
+  .cal-nav{display:flex; gap:6px; flex-shrink:0;}
+  .cal-nav button{background:var(--card2); border:1px solid var(--border); border-radius:11px; min-width:38px; height:38px; padding:0 11px; font-size:15px; font-weight:700; cursor:pointer; color:var(--text); transition:transform .16s, border-color .16s, background .16s;}
+  .cal-nav button:hover{transform:translateY(-1px); border-color:var(--accent);}
+  .cal-nav .cal-hoy{width:auto; color:var(--accent);}
+
+  .cal-resumen-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:16px;}
+  .cal-stat{display:flex; align-items:center; gap:10px; min-width:0; background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:11px 12px;}
+  .cal-stat-icon{width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:var(--card); flex-shrink:0; font-size:16px;}
+  .cal-stat div{min-width:0;}
+  .cal-stat b{display:block; font-size:15px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cal-stat small{display:block; color:var(--text-dim); font-size:10px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cal-stat-proximo{background:linear-gradient(135deg, rgba(20,184,166,.13), rgba(45,212,191,.04)); border-color:rgba(20,184,166,.28);}
+
+  .cal-layout{display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,.72fr); gap:14px; align-items:start;}
+  .cal-main{min-width:0;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px;}
+  .cal-diasemana{font-size:10px; text-align:center; color:var(--text-dim); font-weight:800; padding:4px 0 6px; letter-spacing:.04em;}
+  .cal-day{min-width:0; min-height:82px; border-radius:14px; background:var(--card2); border:1px solid transparent; padding:7px; font-size:11px; position:relative; cursor:pointer; display:flex; flex-direction:column; overflow:hidden; transition:transform .16s, border-color .16s, background .16s, box-shadow .16s; outline:none;}
+  .cal-day:hover{transform:translateY(-1px); border-color:var(--border); box-shadow:0 5px 14px rgba(30,36,60,.06);}
+  .cal-day.otro-mes{opacity:.28; cursor:default; box-shadow:none; transform:none;}
+  .cal-day.hoy{border-color:rgba(20,184,166,.5);}
+  .cal-day.seleccionado{background:rgba(20,184,166,.1); border-color:var(--accent); box-shadow:0 0 0 2px rgba(20,184,166,.08);}
+  .cal-day:focus-visible{box-shadow:0 0 0 3px rgba(20,184,166,.2);}
+  .cal-day-top{display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:5px;}
+  .cal-day .cal-num{font-weight:800; font-size:12px; line-height:1;}
+  .cal-day.hoy .cal-num{display:grid; place-items:center; width:22px; height:22px; border-radius:8px; background:var(--accent); color:var(--accent-ink);}
+  .cal-count{display:grid; place-items:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--card); border:1px solid var(--border); color:var(--text-dim); font-size:9px; font-weight:800;}
+  .cal-mini-list{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .cal-mini-event{display:block; min-width:0; padding:3px 5px 3px 8px; border-radius:6px; background:var(--card); color:var(--text-dim); font-size:9px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative;}
+  .cal-mini-event::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--evento-color);}
+  .cal-extra{font-size:9px; color:var(--text-dim); font-weight:700; padding-left:2px;}
+  .cal-dots{display:none; flex-wrap:wrap; gap:3px; margin-top:auto;}
+  .cal-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+
+  .cal-leyenda{display:flex; flex-wrap:wrap; gap:7px; font-size:10px; color:var(--text-dim); margin-top:12px;}
+  .cal-leyenda > span{display:flex; align-items:center; gap:5px; background:var(--card2); border:1px solid var(--border); border-radius:999px; padding:5px 8px;}
+
+  .cal-side{display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .cal-panel{background:var(--card2); border:1px solid var(--border); border-radius:16px; padding:13px;}
+  .cal-panel .card-title{margin-bottom:9px;}
+  .cal-detalle-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .cal-detalle-head > div{min-width:0;}
+  .cal-detalle-head span{display:block; color:var(--text-dim); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;}
+  .cal-detalle-head b{display:block; margin-top:2px; font-size:14px; text-transform:capitalize;}
+  .cal-evento-item{display:flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--evento-color); border-radius:12px; padding:10px; margin-top:7px;}
+  .cal-evento-icono{width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:var(--card2); flex-shrink:0;}
+  .cal-evento-info{min-width:0; flex:1;}
+  .cal-evento-info b{display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cal-evento-info small{display:block; color:var(--text-dim); font-size:10px; margin-top:3px; line-height:1.25;}
+  .cal-evento-monto{font-size:12px; white-space:nowrap; color:var(--danger);}
+  .cal-evento-monto.cobrar{color:var(--good);}
+  .cal-empty-day{display:flex; flex-direction:column; align-items:center; text-align:center; padding:18px 10px 12px; color:var(--text-dim);}
+  .cal-empty-day > span{font-size:26px; margin-bottom:5px;}
+  .cal-empty-day b{font-size:13px; color:var(--text);}
+  .cal-empty-day small{font-size:10px; margin-top:3px;}
+
+  .cal-agenda-item{width:100%; display:flex; align-items:center; gap:8px; border:none; border-bottom:1px solid var(--border); background:transparent; color:var(--text); text-align:left; padding:9px 0; cursor:pointer;}
+  .cal-agenda-item:last-child{border-bottom:none;}
+  .cal-agenda-item:hover .cal-agenda-info b{color:var(--accent);}
+  .cal-agenda-fecha{width:34px; text-align:center; flex-shrink:0;}
+  .cal-agenda-fecha b{display:block; font-size:14px; line-height:1;}
+  .cal-agenda-fecha small{display:block; color:var(--text-dim); font-size:9px; text-transform:uppercase; margin-top:3px;}
+  .cal-agenda-color{width:4px; height:30px; border-radius:999px; flex-shrink:0;}
+  .cal-agenda-info{min-width:0; flex:1;}
+  .cal-agenda-info b{display:block; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .16s;}
+  .cal-agenda-info small{display:block; color:var(--text-dim); font-size:9px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cal-agenda-item > strong{font-size:10px; white-space:nowrap;}
+  .cal-agenda-vacia{font-size:11px; color:var(--text-dim); text-align:center; padding:14px 6px;}
+
+  @media (max-width:820px){
+    .cal-layout{grid-template-columns:1fr;}
+    .cal-side{display:grid; grid-template-columns:1fr 1fr;}
+    .cal-resumen-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width:620px){
+    .cal-header{align-items:center;}
+    .cal-kicker,.cal-subtitulo{display:none;}
+    .cal-titulo{font-size:18px;}
+    .cal-nav button{min-width:34px; height:34px; padding:0 9px;}
+    .cal-resumen-grid{gap:7px; margin-bottom:13px;}
+    .cal-stat{padding:9px; gap:8px;}
+    .cal-stat-icon{width:30px; height:30px; font-size:14px;}
+    .cal-stat b{font-size:13px;}
+    .cal-stat small{font-size:9px;}
+    .cal-grid{gap:4px;}
+    .cal-day{min-height:0; aspect-ratio:1; padding:5px; border-radius:11px;}
+    .cal-day:hover{transform:none; box-shadow:none;}
+    .cal-mini-list,.cal-count{display:none;}
+    .cal-dots{display:flex;}
+    .cal-day .cal-num{font-size:11px;}
+    .cal-day.hoy .cal-num{width:20px; height:20px; border-radius:7px;}
+    .cal-side{display:flex;}
+  }
+  @media (max-width:380px){
+    .cal-nav .cal-hoy{display:none;}
+    .cal-resumen-grid{grid-template-columns:1fr 1fr;}
+    .cal-stat-icon{display:none;}
+  }
 
   /* ---------- COMPARAR PERIODOS ---------- */
   .comparar-selectores{display:flex; gap:8px; align-items:center; margin-bottom:14px;}
@@ -627,23 +715,41 @@
 
   <!-- CALENDARIO -->
   <div class="screen" id="screen-calendario">
-    <div class="card full-width">
+    <div class="card full-width cal-card">
       <div class="cal-header">
-        <div class="cal-titulo" id="calTitulo"></div>
+        <div class="cal-heading">
+          <span class="cal-kicker">Agenda financiera</span>
+          <div class="cal-titulo" id="calTitulo"></div>
+          <div class="cal-subtitulo" id="calSubtitulo"></div>
+        </div>
         <div class="cal-nav">
-          <button onclick="calMoverMes(-1)">‹</button>
-          <button onclick="calIrHoy()">Hoy</button>
-          <button onclick="calMoverMes(1)">›</button>
+          <button type="button" onclick="calMoverMes(-1)" aria-label="Mes anterior">‹</button>
+          <button type="button" class="cal-hoy" onclick="calIrHoy()">Hoy</button>
+          <button type="button" onclick="calMoverMes(1)" aria-label="Mes siguiente">›</button>
         </div>
       </div>
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="cal-leyenda">
-        <span><span class="cal-dot" style="background:var(--danger)"></span>Cierre de tarjeta</span>
-        <span><span class="cal-dot" style="background:var(--warn)"></span>Suscripción/servicio</span>
-        <span><span class="cal-dot" style="background:var(--accent2)"></span>Cuota</span>
-        <span><span class="cal-dot" style="background:var(--good)"></span>Te deben / debes</span>
+
+      <div class="cal-resumen-grid" id="calResumen"></div>
+
+      <div class="cal-layout">
+        <div class="cal-main">
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-leyenda">
+            <span><span class="cal-dot" style="background:var(--danger)"></span>Cierre de tarjeta</span>
+            <span><span class="cal-dot" style="background:var(--warn)"></span>Suscripción/servicio</span>
+            <span><span class="cal-dot" style="background:var(--accent2)"></span>Cuota</span>
+            <span><span class="cal-dot" style="background:var(--good)"></span>Deuda pendiente</span>
+          </div>
+        </div>
+
+        <div class="cal-side">
+          <div class="cal-panel" id="calEventosDia"></div>
+          <div class="cal-panel">
+            <div class="card-title">Agenda del mes</div>
+            <div id="calAgendaMes"></div>
+          </div>
+        </div>
       </div>
-      <div class="cal-eventos-dia" id="calEventosDia"></div>
     </div>
   </div>
 
@@ -2332,97 +2438,330 @@ function renderComparador(){
 
 // ---------- CALENDARIO DE PAGOS Y COBROS ----------
 let calFechaActual = new Date();
-function calMoverMes(n){ calFechaActual = new Date(calFechaActual.getFullYear(), calFechaActual.getMonth()+n, 1); renderCalendario(); }
-function calIrHoy(){ calFechaActual = new Date(); renderCalendario(); }
-// Junta, para cada día del mes visible: cierres de tarjetas, vencimientos
-// de suscripciones/servicios, próximas cuotas, y deudas pendientes (te
-// deben / debes) usando su fecha de origen como referencia de "antigüedad",
-// no como vencimiento exacto (las deudas familiares no tienen fecha límite
-// fija, pero sirve para verlas ubicadas en el tiempo).
+let calFechaSeleccionada = '';
+
+function calKey(fecha){
+  return fecha.getFullYear() + '-' +
+    String(fecha.getMonth() + 1).padStart(2, '0') + '-' +
+    String(fecha.getDate()).padStart(2, '0');
+}
+
+function calEsc(valor){
+  return String(valor == null ? '' : valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function calMoverMes(n){
+  calFechaActual = new Date(
+    calFechaActual.getFullYear(),
+    calFechaActual.getMonth() + n,
+    1
+  );
+  calFechaSeleccionada = '';
+  renderCalendario();
+}
+
+function calIrHoy(){
+  calFechaActual = new Date();
+  calFechaSeleccionada = calKey(new Date());
+  renderCalendario();
+}
+
 function eventosDelMes(anio, mes){
-  const eventos = {}; // 'YYYY-MM-DD' -> [{tipo, texto, color}]
-  function agregar(fecha, tipo, texto, color){
-    const key = fecha.getFullYear()+'-'+String(fecha.getMonth()+1).padStart(2,'0')+'-'+String(fecha.getDate()).padStart(2,'0');
+  const eventos = {};
+  const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+
+  function agregar(fecha, evento){
+    if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return;
+    const key = calKey(fecha);
     if (!eventos[key]) eventos[key] = [];
-    eventos[key].push({ tipo, texto, color });
+    eventos[key].push(evento);
   }
-  // Cierres de tarjeta (de toda la familia, cualquier tarjeta que el usuario vea)
+
   getTarjetas().forEach(t => {
-    if (!t.diaCierre) return;
-    const dia = Math.min(28, Number(t.diaCierre));
-    const fechaCierre = new Date(anio, mes, dia);
-    agregar(fechaCierre, 'cierre', '💳 Cierra ' + t.nombre + ' (de ' + t.propietario + ')', 'var(--danger)');
+    const diaConfigurado = Number(t.diaCierre);
+    if (!diaConfigurado) return;
+    const dia = Math.min(Math.max(1, diaConfigurado), ultimoDia);
+    agregar(new Date(anio, mes, dia), {
+      tipo: 'cierre',
+      icono: '💳',
+      titulo: 'Cierre de ' + t.nombre,
+      detalle: 'Tarjeta de ' + t.propietario,
+      color: 'var(--danger)',
+      monto: 0,
+      sentido: ''
+    });
   });
-  // Suscripciones activas del usuario actual
+
   misSuscripcionesActivas().forEach(s => {
-    const dia = Math.min(28, Number(s.DiaPago));
-    const fecha = new Date(anio, mes, dia);
-    agregar(fecha, 'suscripcion', '🔁 ' + s.Nombre + ' — S/' + Number(s.Monto).toFixed(2), 'var(--warn)');
+    const dia = Math.min(Math.max(1, Number(s.DiaPago) || 1), ultimoDia);
+    agregar(new Date(anio, mes, dia), {
+      tipo: 'suscripcion',
+      icono: '🔁',
+      titulo: s.Nombre,
+      detalle: 'Suscripción · ' + (s.Metodo || 'Método no indicado'),
+      color: 'var(--warn)',
+      monto: Number(s.Monto || 0),
+      sentido: 'pagar'
+    });
   });
-  // Próximas cuotas del usuario actual
-  state.movimientos.filter(m => m.Persona === MI_PERSONA && m.CuotaGrupoID).forEach(m => {
-    const f = new Date(m.Fecha);
-    if (f.getFullYear() === anio && f.getMonth() === mes){
-      agregar(f, 'cuota', '📅 Cuota: ' + (m.Descripcion || m.Categoria) + ' — S/' + Number(m.Monto).toFixed(2), 'var(--accent2)');
-    }
+
+  const cuotasPorGrupo = {};
+  state.movimientos
+    .filter(m => m.Persona === MI_PERSONA && m.CuotaGrupoID)
+    .forEach(m => {
+      if (!cuotasPorGrupo[m.CuotaGrupoID]) cuotasPorGrupo[m.CuotaGrupoID] = [];
+      cuotasPorGrupo[m.CuotaGrupoID].push(m);
+    });
+
+  Object.values(cuotasPorGrupo).forEach(grupo => {
+    grupo.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
+    grupo.forEach((m, indice) => {
+      const fecha = new Date(m.Fecha);
+      if (fecha.getFullYear() !== anio || fecha.getMonth() !== mes) return;
+      agregar(fecha, {
+        tipo: 'cuota',
+        icono: '🧾',
+        titulo: m.Descripcion || m.Categoria || 'Compra en cuotas',
+        detalle: (m.Metodo || 'Método no indicado') + ' · cuota ' + (indice + 1) + '/' + grupo.length,
+        color: 'var(--accent2)',
+        monto: Number(m.Monto || 0),
+        sentido: 'pagar'
+      });
+    });
   });
-  // Deudas pendientes (ubicadas en su fecha de origen)
-  state.deudas.filter(d => d.Estado !== 'Pagado' && (d.Persona === MI_PERSONA || d.Acreedor === MI_PERSONA)).forEach(d => {
-    const f = new Date(d.Fecha);
-    if (f.getFullYear() === anio && f.getMonth() === mes){
-      const saldo = Number(d.MontoDebe) - Number(d.MontoPagado);
+
+  state.deudas
+    .filter(d => d.Estado !== 'Pagado' && (d.Persona === MI_PERSONA || d.Acreedor === MI_PERSONA))
+    .forEach(d => {
+      const fecha = new Date(d.Fecha);
+      if (Number.isNaN(fecha.getTime()) || fecha.getFullYear() !== anio || fecha.getMonth() !== mes) return;
+
+      const saldo = Number(d.MontoDebe || 0) - Number(d.MontoPagado || 0);
       if (saldo <= 0) return;
-      const texto = d.Acreedor === MI_PERSONA
-        ? '🤝 ' + d.Persona + ' te debe S/' + saldo.toFixed(2)
-        : '🤝 Le debes a ' + d.Acreedor + ' S/' + saldo.toFixed(2);
-      agregar(f, 'deuda', texto, 'var(--good)');
-    }
+
+      const meDeben = d.Acreedor === MI_PERSONA;
+      agregar(fecha, {
+        tipo: 'deuda',
+        icono: meDeben ? '📥' : '📤',
+        titulo: meDeben ? d.Persona + ' te debe' : 'Le debes a ' + d.Acreedor,
+        detalle: (d.Descripcion || 'Deuda pendiente') + ' · registrada en esta fecha',
+        color: 'var(--good)',
+        monto: saldo,
+        sentido: meDeben ? 'cobrar' : 'pagar'
+      });
+    });
+
+  Object.keys(eventos).forEach(key => {
+    eventos[key].sort((a, b) => {
+      const orden = { cierre: 1, suscripcion: 2, cuota: 3, deuda: 4 };
+      return (orden[a.tipo] || 99) - (orden[b.tipo] || 99);
+    });
   });
+
   return eventos;
 }
-function renderCalendario(){
-  const anio = calFechaActual.getFullYear(), mes = calFechaActual.getMonth();
-  document.getElementById('calTitulo').textContent = calFechaActual.toLocaleDateString('es-PE',{month:'long', year:'numeric'});
-  const eventos = eventosDelMes(anio, mes);
-  const primerDia = new Date(anio, mes, 1);
-  const offset = primerDia.getDay(); // 0=domingo
-  const diasEnMes = new Date(anio, mes+1, 0).getDate();
-  const diasSemana = ['D','L','M','M','J','V','S'];
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
 
-  let html = diasSemana.map(d => '<div class="cal-diasemana">'+d+'</div>').join('');
-  // días del mes anterior para rellenar la primera semana
-  const diasMesAnterior = new Date(anio, mes, 0).getDate();
-  for (let i=offset-1; i>=0; i--){
-    html += '<div class="cal-day otro-mes"><div class="cal-num">'+(diasMesAnterior-i)+'</div></div>';
+function calEventosOrdenados(eventos){
+  return Object.keys(eventos).sort().flatMap(key =>
+    eventos[key].map(evento => ({ key, evento }))
+  );
+}
+
+function calElegirFechaInicial(eventos, anio, mes){
+  const prefijoMes = anio + '-' + String(mes + 1).padStart(2, '0') + '-';
+  if (calFechaSeleccionada.indexOf(prefijoMes) === 0) return calFechaSeleccionada;
+
+  const hoy = new Date();
+  if (hoy.getFullYear() === anio && hoy.getMonth() === mes){
+    return calKey(hoy);
   }
-  for (let d=1; d<=diasEnMes; d++){
+
+  const primeraFechaConEvento = Object.keys(eventos).sort()[0];
+  return primeraFechaConEvento || prefijoMes + '01';
+}
+
+function renderResumenCalendario(eventos){
+  const lista = calEventosOrdenados(eventos);
+  const pagosProgramados = lista
+    .filter(x => x.evento.sentido === 'pagar' && (x.evento.tipo === 'suscripcion' || x.evento.tipo === 'cuota'))
+    .reduce((s, x) => s + Number(x.evento.monto || 0), 0);
+  const porCobrar = lista
+    .filter(x => x.evento.sentido === 'cobrar')
+    .reduce((s, x) => s + Number(x.evento.monto || 0), 0);
+
+  const hoyKey = calKey(new Date());
+  const proximo = lista.find(x => x.key >= hoyKey) || null;
+  let proximoValor = 'Sin pendientes';
+  let proximoMeta = 'Nada próximo en este mes';
+
+  if (proximo){
+    const fecha = new Date(proximo.key + 'T12:00:00');
+    proximoValor = fecha.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+    proximoMeta = proximo.evento.titulo;
+  }
+
+  document.getElementById('calResumen').innerHTML =
+    '<div class="cal-stat"><span class="cal-stat-icon">🗓️</span><div><b>' + lista.length + '</b><small>eventos del mes</small></div></div>' +
+    '<div class="cal-stat"><span class="cal-stat-icon">💸</span><div><b>S/' + pagosProgramados.toFixed(2) + '</b><small>pagos programados</small></div></div>' +
+    '<div class="cal-stat"><span class="cal-stat-icon">📥</span><div><b>S/' + porCobrar.toFixed(2) + '</b><small>por cobrar</small></div></div>' +
+    '<div class="cal-stat cal-stat-proximo"><span class="cal-stat-icon">⏭️</span><div><b>' + calEsc(proximoValor) + '</b><small>' + calEsc(proximoMeta) + '</small></div></div>';
+}
+
+function renderCalendario(){
+  const anio = calFechaActual.getFullYear();
+  const mes = calFechaActual.getMonth();
+  const eventos = eventosDelMes(anio, mes);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  document.getElementById('calTitulo').textContent =
+    calFechaActual.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+  document.getElementById('calSubtitulo').textContent =
+    'Tus cierres, cuotas, servicios y deudas en una sola vista';
+
+  calFechaSeleccionada = calElegirFechaInicial(eventos, anio, mes);
+  renderResumenCalendario(eventos);
+
+  const primerDia = new Date(anio, mes, 1);
+  const offset = (primerDia.getDay() + 6) % 7;
+  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+  const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+  let html = diasSemana
+    .map(d => '<div class="cal-diasemana">' + d + '</div>')
+    .join('');
+
+  const diasMesAnterior = new Date(anio, mes, 0).getDate();
+  for (let i = offset - 1; i >= 0; i--){
+    html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">' + (diasMesAnterior - i) + '</div></div>';
+  }
+
+  for (let d = 1; d <= diasEnMes; d++){
     const fecha = new Date(anio, mes, d);
-    const key = anio+'-'+String(mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const key = calKey(fecha);
     const evs = eventos[key] || [];
     const esHoy = fecha.getTime() === hoy.getTime();
-    const dots = evs.slice(0,4).map(e => '<span class="cal-dot" style="background:'+e.color+'"></span>').join('');
-    html += '<div class="cal-day'+(esHoy?' hoy':'')+(evs.length?' clickable':'')+'" onclick="'+(evs.length?"calVerDia('"+key+"')":'')+'">' +
-      '<div class="cal-num">'+d+'</div><div class="cal-dots">'+dots+'</div></div>';
+    const seleccionado = key === calFechaSeleccionada;
+    const clases = [
+      'cal-day',
+      evs.length ? 'tiene-eventos' : '',
+      esHoy ? 'hoy' : '',
+      seleccionado ? 'seleccionado' : ''
+    ].filter(Boolean).join(' ');
+
+    const dots = evs.slice(0, 4)
+      .map(e => '<span class="cal-dot" style="background:' + e.color + '"></span>')
+      .join('');
+
+    const miniEventos = evs.slice(0, 2)
+      .map(e => '<span class="cal-mini-event" style="--evento-color:' + e.color + '">' + calEsc(e.titulo) + '</span>')
+      .join('');
+
+    const extra = evs.length > 2 ? '<span class="cal-extra">+' + (evs.length - 2) + '</span>' : '';
+    const etiqueta = evs.length
+      ? d + ', ' + evs.length + ' evento' + (evs.length === 1 ? '' : 's')
+      : String(d);
+
+    html += '<div class="' + clases + '" role="button" tabindex="0" aria-label="' + etiqueta + '" ' +
+      'onclick="calVerDia(\'' + key + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();calVerDia(\'' + key + '\');}">' +
+      '<div class="cal-day-top"><span class="cal-num">' + d + '</span>' +
+      (evs.length ? '<span class="cal-count">' + evs.length + '</span>' : '') + '</div>' +
+      '<div class="cal-mini-list">' + miniEventos + extra + '</div>' +
+      '<div class="cal-dots">' + dots + '</div>' +
+      '</div>';
   }
-  // completa la última semana con días del mes siguiente
+
   const totalCeldas = offset + diasEnMes;
   const faltan = (7 - (totalCeldas % 7)) % 7;
-  for (let d=1; d<=faltan; d++){
-    html += '<div class="cal-day otro-mes"><div class="cal-num">'+d+'</div></div>';
+  for (let d = 1; d <= faltan; d++){
+    html += '<div class="cal-day otro-mes" aria-hidden="true"><div class="cal-num">' + d + '</div></div>';
   }
+
   document.getElementById('calGrid').innerHTML = html;
-  document.getElementById('calEventosDia').innerHTML = '';
   window._calEventosMes = eventos;
+  renderDetalleDiaCalendario(calFechaSeleccionada);
+  renderAgendaMesCalendario(eventos, anio, mes);
 }
+
 function calVerDia(key){
-  const evs = (window._calEventosMes || {})[key] || [];
+  calFechaSeleccionada = key;
+  renderCalendario();
+}
+
+function renderDetalleDiaCalendario(key){
   const wrap = document.getElementById('calEventosDia');
-  if (!evs.length){ wrap.innerHTML = ''; return; }
-  const [a,m,d] = key.split('-');
-  const fechaTxt = new Date(Number(a), Number(m)-1, Number(d)).toLocaleDateString('es-PE',{day:'2-digit',month:'long'});
-  wrap.innerHTML = '<div class="card-title">'+fechaTxt+'</div>' +
-    evs.map(e => '<div class="mov-item"><div class="mov-desc">'+e.texto+'</div></div>').join('');
+  const eventos = (window._calEventosMes || {})[key] || [];
+  const fecha = new Date(key + 'T12:00:00');
+  const fechaTxt = fecha.toLocaleDateString('es-PE', {
+    weekday: 'long', day: '2-digit', month: 'long'
+  });
+
+  let html = '<div class="cal-detalle-head"><div><span>Día seleccionado</span><b>' + calEsc(fechaTxt) + '</b></div>' +
+    '<button class="btn btn-sm btn-secondary" onclick="registrarDesdeCalendario(\'' + key + '\')">+ Registrar</button></div>';
+
+  if (!eventos.length){
+    html += '<div class="cal-empty-day"><span>🌤️</span><b>Día libre</b><small>No hay pagos ni cobros registrados para esta fecha.</small></div>';
+    wrap.innerHTML = html;
+    return;
+  }
+
+  html += eventos.map(e => {
+    const monto = Number(e.monto || 0);
+    const montoHtml = monto > 0
+      ? '<strong class="cal-evento-monto ' + (e.sentido === 'cobrar' ? 'cobrar' : '') + '">' +
+        (e.sentido === 'cobrar' ? '+' : '') + 'S/' + monto.toFixed(2) + '</strong>'
+      : '';
+
+    return '<div class="cal-evento-item" style="--evento-color:' + e.color + '">' +
+      '<div class="cal-evento-icono">' + e.icono + '</div>' +
+      '<div class="cal-evento-info"><b>' + calEsc(e.titulo) + '</b><small>' + calEsc(e.detalle) + '</small></div>' +
+      montoHtml + '</div>';
+  }).join('');
+
+  wrap.innerHTML = html;
+}
+
+function renderAgendaMesCalendario(eventos, anio, mes){
+  const wrap = document.getElementById('calAgendaMes');
+  const lista = calEventosOrdenados(eventos);
+  const hoy = new Date();
+  const esMesActual = hoy.getFullYear() === anio && hoy.getMonth() === mes;
+  const desde = esMesActual ? calKey(hoy) : anio + '-' + String(mes + 1).padStart(2, '0') + '-01';
+  const visibles = lista.filter(x => x.key >= desde).slice(0, 8);
+
+  if (!visibles.length){
+    wrap.innerHTML = '<div class="cal-agenda-vacia">No quedan eventos para mostrar en este mes.</div>';
+    return;
+  }
+
+  wrap.innerHTML = visibles.map(({ key, evento }) => {
+    const fecha = new Date(key + 'T12:00:00');
+    const dia = fecha.toLocaleDateString('es-PE', { day: '2-digit' });
+    const mesCorto = fecha.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '');
+    const monto = Number(evento.monto || 0);
+
+    return '<button type="button" class="cal-agenda-item" onclick="calVerDia(\'' + key + '\')">' +
+      '<span class="cal-agenda-fecha"><b>' + dia + '</b><small>' + calEsc(mesCorto) + '</small></span>' +
+      '<span class="cal-agenda-color" style="background:' + evento.color + '"></span>' +
+      '<span class="cal-agenda-info"><b>' + calEsc(evento.titulo) + '</b><small>' + calEsc(evento.detalle) + '</small></span>' +
+      (monto > 0 ? '<strong>' + (evento.sentido === 'cobrar' ? '+' : '') + 'S/' + monto.toFixed(2) + '</strong>' : '') +
+      '</button>';
+  }).join('');
+}
+
+function registrarDesdeCalendario(key){
+  const campoFecha = document.getElementById('fFecha');
+  if (campoFecha) campoFecha.value = key;
+  irA('registrar');
+  setTimeout(() => {
+    const registro = document.getElementById('registroUnicoWrap');
+    if (registro) registro.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 
 // ---------- FORM REGISTRAR ----------
