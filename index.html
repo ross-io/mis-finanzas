@@ -2679,6 +2679,7 @@ function elegirDivisionMovimiento(prefix, modo){
 // igual, pero se puede activar "Montos distintos por persona" para poner
 // cifras a mano (ej. uno paga 10, otro 50).
 const divisionManualState = {}; // { prefix: boolean }
+const divisionManualLocks = {}; // { prefix: { persona: monto fijado a mano } } — los NO listados acá se reparten el resto automático
 function renderCompartirMiembros(prefix, preseleccionados){
   const wrap = document.getElementById(prefix+'CompartirMiembros');
   const metodo = leerMetodoPicker(prefix+'MetodoPicker');
@@ -2690,6 +2691,7 @@ function renderCompartirMiembros(prefix, preseleccionados){
   const chkManual = document.getElementById(prefix+'DivisionManual');
   if (chkManual){ chkManual.checked = false; }
   divisionManualState[prefix] = false;
+  divisionManualLocks[prefix] = {};
   actualizarResumenCompartir(prefix);
 }
 function toggleChipCompartir(el, prefix){
@@ -2698,13 +2700,15 @@ function toggleChipCompartir(el, prefix){
 }
 function toggleDivisionManual(prefix){
   divisionManualState[prefix] = document.getElementById(prefix+'DivisionManual').checked;
+  divisionManualLocks[prefix] = {}; // empieza de cero cada vez que activas el modo manual
   actualizarResumenCompartir(prefix);
 }
 // Recalcula en vivo. En modo automático: monto total ÷ cantidad de chips
 // seleccionados (incluyéndote a ti SOLO si tú mismo estás entre los
-// seleccionados). En modo manual: pinta un campo numérico por persona
-// seleccionada (arrancando en la parte igual como sugerencia, editable) y
-// muestra si la suma ya calza con el monto total o todavía falta/sobra.
+// seleccionados). En modo manual: cada persona parte con una sugerencia
+// igual, editable — al escribir el monto de UNA persona, esa queda "fija"
+// (🔒) y el resto se reparte automáticamente lo que falta entre las que
+// todavía no tocaste, hasta que completes el total.
 function actualizarResumenCompartir(prefix){
   const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
   const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
@@ -2716,20 +2720,7 @@ function actualizarResumenCompartir(prefix){
     return;
   }
   if (divisionManualState[prefix]){
-    if (manualWrap){
-      const existentes = {};
-      manualWrap.querySelectorAll('input[data-persona]').forEach(inp => { existentes[inp.dataset.persona] = inp.value; });
-      const cadaUnoDefault = seleccionados.length ? monto / seleccionados.length : 0;
-      manualWrap.innerHTML = seleccionados.map(n =>
-        '<div class="row-2" style="align-items:center; margin-bottom:6px;"><label style="flex:1; font-size:13px;">'+n+'</label>' +
-        '<input type="number" step="0.01" min="0" data-persona="'+n+'" value="'+(existentes[n]!==undefined?existentes[n]:cadaUnoDefault.toFixed(2))+'" oninput="actualizarResumenCompartir(\''+prefix+'\')" style="flex:1;"></div>'
-      ).join('');
-    }
-    const suma = manualWrap ? [...manualWrap.querySelectorAll('input[data-persona]')].reduce((s,inp)=>s+(parseFloat(inp.value)||0),0) : 0;
-    const diff = monto - suma;
-    resumenEl.innerHTML = Math.abs(diff) < 0.01
-      ? '<span style="color:var(--good); font-weight:700;">✅ Suma exacta: S/'+suma.toFixed(2)+'</span>'
-      : '<span style="color:var(--danger); font-weight:700;">⚠️ '+(diff>0?'Falta asignar':'Te pasaste por')+' S/'+Math.abs(diff).toFixed(2)+' (llevas S/'+suma.toFixed(2)+' de S/'+monto.toFixed(2)+')</span>';
+    renderDivisionManualCampos(prefix, monto, seleccionados);
     return;
   }
   if (manualWrap) manualWrap.innerHTML = '';
@@ -2739,6 +2730,79 @@ function actualizarResumenCompartir(prefix){
   resumenEl.textContent = teIncluyes
     ? ('Se divide entre ' + divisor + ' (' + seleccionados.join(', ') + '): S/' + cadaUno.toFixed(2) + ' cada uno.')
     : ('Es 100% de ' + seleccionados.join(' y ') + (divisor > 1 ? (' — S/' + cadaUno.toFixed(2) + ' cada uno') : '') + '. Tú no entras en esta cuenta.');
+}
+// Reconstruye TODO el bloque manual (chips fijos/auto + botón de
+// desbloquear) — se usa en los puntos donde conviene rehacer el HTML
+// entero: al activar el modo, al cambiar quién está seleccionado, o al
+// desbloquear un monto con el botón 🔓. NUNCA se llama mientras el usuario
+// está tecleando un número (destruiría el campo a media escritura y le
+// haría perder el cursor) — para eso está actualizarDivisionManualEnVivo,
+// que solo actualiza el VALOR de los otros campos sin reconstruir nada.
+function renderDivisionManualCampos(prefix, monto, seleccionados){
+  const manualWrap = document.getElementById(prefix+'DivisionManualCampos');
+  if (!manualWrap) return;
+  if (!divisionManualLocks[prefix]) divisionManualLocks[prefix] = {};
+  const locks = divisionManualLocks[prefix];
+  Object.keys(locks).forEach(n => { if (seleccionados.indexOf(n) === -1) delete locks[n]; });
+  const bloqueados = seleccionados.filter(n => locks[n] !== undefined);
+  const autos = seleccionados.filter(n => locks[n] === undefined);
+  const sumaBloqueada = bloqueados.reduce((s,n) => s + locks[n], 0);
+  const restante = monto - sumaBloqueada;
+  const cadaAuto = autos.length ? Math.max(0, restante / autos.length) : 0;
+
+  manualWrap.innerHTML = seleccionados.map(n => {
+    const esBloqueado = locks[n] !== undefined;
+    const valor = esBloqueado ? locks[n] : cadaAuto;
+    return '<div class="row-2" style="align-items:center; margin-bottom:6px;">' +
+      '<label style="flex:1; font-size:13px;">'+n+(esBloqueado?' <span style="color:var(--accent2);" title="Monto fijado a mano">🔒</span>':' <span style="color:var(--text-dim); font-size:11px;">(auto)</span>')+'</label>' +
+      '<input type="number" step="0.01" min="0" data-persona="'+n+'" value="'+valor.toFixed(2)+'" oninput="actualizarDivisionManualEnVivo(\''+prefix+'\', this)" style="flex:1;">' +
+      (esBloqueado ? '<button type="button" class="btn btn-sm btn-secondary" style="width:auto; padding:8px 10px; flex:0;" onclick="desbloquearMontoManual(\''+prefix+'\',\''+n.replace(/'/g,"\\'")+'\')" title="Quitar el fijo y que vuelva a repartirse automático">🔓</button>' : '') +
+    '</div>';
+  }).join('');
+  actualizarResumenTextoManual(prefix, monto);
+}
+// Se dispara en cada tecla que escribes en un campo: fija esa persona con
+// lo que llevas escrito y reparte lo que falta/sobra entre las personas que
+// TODAVÍA no tocaste — pero solo actualiza el VALOR de esos otros campos
+// (sin reconstruir el HTML), así el campo donde estás escribiendo nunca
+// pierde el foco ni el cursor.
+function actualizarDivisionManualEnVivo(prefix, inputEl){
+  const persona = inputEl.dataset.persona;
+  const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
+  if (!divisionManualLocks[prefix]) divisionManualLocks[prefix] = {};
+  divisionManualLocks[prefix][persona] = parseFloat(inputEl.value) || 0;
+
+  const manualWrap = document.getElementById(prefix+'DivisionManualCampos');
+  const todos = [...manualWrap.querySelectorAll('input[data-persona]')].map(i => i.dataset.persona);
+  const locks = divisionManualLocks[prefix];
+  const bloqueados = todos.filter(n => locks[n] !== undefined);
+  const autos = todos.filter(n => locks[n] === undefined);
+  const sumaBloqueada = bloqueados.reduce((s,n) => s + locks[n], 0);
+  const restante = monto - sumaBloqueada;
+  const cadaAuto = autos.length ? Math.max(0, restante / autos.length) : 0;
+
+  autos.forEach(n => {
+    const inp = manualWrap.querySelector('input[data-persona="'+n.replace(/"/g,'\\"')+'"]');
+    if (inp) inp.value = cadaAuto.toFixed(2);
+  });
+  actualizarResumenTextoManual(prefix, monto);
+}
+// El 🔓 sí puede reconstruir todo el bloque de un jalón (es un click, no
+// escritura continua, así que no hay riesgo de perder el cursor).
+function desbloquearMontoManual(prefix, persona){
+  if (divisionManualLocks[prefix]) delete divisionManualLocks[prefix][persona];
+  const monto = parseFloat(document.getElementById(prefix+'Monto').value) || 0;
+  const seleccionados = [...document.querySelectorAll('#'+prefix+'CompartirMiembros .chip.active')].map(c => c.textContent);
+  renderDivisionManualCampos(prefix, monto, seleccionados);
+}
+function actualizarResumenTextoManual(prefix, monto){
+  const manualWrap = document.getElementById(prefix+'DivisionManualCampos');
+  const resumenEl = document.getElementById(prefix+'CompartirResumen');
+  const suma = manualWrap ? [...manualWrap.querySelectorAll('input[data-persona]')].reduce((s,inp)=>s+(parseFloat(inp.value)||0),0) : 0;
+  const diff = monto - suma;
+  resumenEl.innerHTML = Math.abs(diff) < 0.01
+    ? '<span style="color:var(--good); font-weight:700;">✅ Suma exacta: S/'+suma.toFixed(2)+'</span>'
+    : '<span style="color:var(--danger); font-weight:700;">⚠️ '+(diff>0?'Falta asignar':'Te pasaste por')+' S/'+Math.abs(diff).toFixed(2)+' (llevas S/'+suma.toFixed(2)+' de S/'+monto.toFixed(2)+')</span>';
 }
 // Lee la selección actual y arma el array {persona, monto} a mandar al
 // backend. Si tú apareces entre los seleccionados, tu propio nombre también
@@ -3862,9 +3926,10 @@ function filaPersonaDeuda(t, deudor, acreedor, mostrarPagar){
     '<div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">Ítems pendientes:</div>' +
     t.items.map(it => {
       const fechaTxt = new Date(it.fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'2-digit'});
+      const etiquetaBoton = mostrarPagar ? '✅ Ya me pagó esto' : '💸 Pagar esto';
       return '<div class="mov-item" style="padding:8px 0;"><div><div class="mov-desc" style="font-size:13px;">'+(it.desc||'—')+'</div><div class="mov-meta">'+fechaTxt+'</div></div>' +
         '<div style="text-align:right;"><div class="mov-amount" style="font-size:13px;">S/'+it.saldo.toFixed(2)+'</div>' +
-        '<button class="btn btn-sm btn-secondary" onclick="abrirPagoEspecifico(\''+it.id+'\','+it.saldo+',\''+String(it.desc||'').replace(/'/g,"\\'")+'\')">Pagar esto</button></div></div>';
+        '<button class="btn btn-sm btn-secondary" onclick="abrirPagoEspecifico(\''+it.id+'\','+it.saldo+',\''+String(it.desc||'').replace(/'/g,"\\'")+'\','+mostrarPagar+',\''+t.persona.replace(/'/g,"\\'")+'\')">'+etiquetaBoton+'</button></div></div>';
     }).join('') +
     renderHistorialPagosPar(deudor, acreedor) +
     '</div></div>';
@@ -3902,10 +3967,13 @@ function abrirPago(deudor, acreedor, total){
   abrirModal('modalPago');
 }
 // Modo 2: pago a UNA deuda puntual (ej. "ya me pagó lo del súper del
-// 12/07"), sin tocar el resto de lo que esa persona te debe.
-function abrirPagoEspecifico(deudaId, saldo, descripcion){
+// 12/07"), sin tocar el resto de lo que esa persona te debe. El texto se
+// adapta según la dirección: si te deben a ti, "Ya me pagó" tiene más
+// sentido que "Pagando" (que sonaba como si TÚ fueras a pagar, al revés).
+function abrirPagoEspecifico(deudaId, saldo, descripcion, teDeben, persona){
   pagoActual = { modo:'especifico', deudaId };
-  document.getElementById('pagoInfo').textContent = 'Pagando: ' + (descripcion||'este ítem') + ' — saldo S/' + Number(saldo).toFixed(2);
+  const encabezado = teDeben ? ('Registrando que ' + (persona||'te') + ' ya pagó: ') : 'Pagando: ';
+  document.getElementById('pagoInfo').textContent = encabezado + (descripcion||'este ítem') + ' — saldo S/' + Number(saldo).toFixed(2);
   document.getElementById('pagoMonto').value = Number(saldo).toFixed(2);
   document.getElementById('pagoComprobante').value = '';
   abrirModal('modalPago');
