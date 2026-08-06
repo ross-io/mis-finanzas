@@ -395,6 +395,7 @@
     <div class="nav-item active" data-s="inicio" onclick="irA('inicio')"><span class="ic">🏠</span>Inicio</div>
     <div class="nav-item" data-s="compras" onclick="irA('compras')"><span class="ic">🛒</span>Compras</div>
     <div class="nav-item" data-s="registrar" onclick="irA('registrar')"><span class="ic">➕</span>Registrar</div>
+    <div class="nav-item" data-s="asesor" onclick="irA('asesor')"><span class="ic">🤖</span>Asesor</div>
     <div class="nav-item" data-s="calendario" onclick="irA('calendario')"><span class="ic">📅</span>Calendario</div>
     <div class="nav-item" data-s="deudas" onclick="irA('deudas')"><span class="ic">🤝</span>Deudas</div>
     <div class="nav-item" data-s="historial" onclick="irA('historial')"><span class="ic">📜</span>Historial</div>
@@ -614,48 +615,26 @@
   <!-- REGISTRAR -->
   <div class="screen" id="screen-registrar">
     <div class="card">
-      <div class="card-title">🎙️ Anotar por voz</div>
-      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Di algo como "Rossio compró hamburguesas con mi tarjeta BCP por 45 soles" y te prellenamos el formulario de abajo para que revises y guardes.</p>
-      <button class="btn btn-secondary" id="btnComandoVoz" onclick="iniciarComandoVoz()">🎙️ Hablar</button>
-      <div class="row-2" style="margin-top:8px;">
-        <input type="text" id="comandoVozManual" placeholder="...o escríbelo aquí si prefieres" onkeydown="if(event.key==='Enter') procesarComandoVozManual()">
-        <button class="btn btn-sm btn-secondary" style="width:auto;" onclick="procesarComandoVozManual()">Interpretar</button>
+      <div class="card-title">Registrar movimiento</div>
+      <div class="chip-row" id="registroModoTab">
+        <div class="chip active" data-modo="uno" onclick="cambiarModoRegistro('uno')">Un gasto</div>
+        <div class="chip" data-modo="multiple" onclick="cambiarModoRegistro('multiple')">➕ Varios a la vez</div>
+        <div class="chip" data-modo="voz" onclick="cambiarModoRegistro('voz')">🎙️ Por voz</div>
       </div>
-      <div id="comandoVozTexto" style="font-size:13px; color:var(--text-dim); margin-top:8px;"></div>
-    </div>
 
-    <div class="card">
-      <div class="card-title">¿Debo comprarlo? 🤖</div>
-      <div class="field"><input type="text" id="asesorTexto" placeholder="ej. Zapatillas por S/250"></div>
-      <button class="btn btn-secondary" onclick="consultarAsesor()">Consultar</button>
-      <div id="asesorResultado"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">🔮 Simulador de compra</div>
-      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Mira el antes/después en tu balance, tu tarjeta y tu presupuesto ANTES de registrar nada de verdad.</p>
-      <input type="number" class="monto-input" id="simMonto" placeholder="S/ 0.00" inputmode="decimal">
-      <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="simCategorias"></div></div>
-      <div class="field"><label>Método</label><div class="chip-row" id="simMetodos"></div></div>
-      <div class="field">
-        <label class="check"><input type="checkbox" id="simCuotas" onclick="toggleSimCuotas()"> Pagar en cuotas</label>
-        <div id="simCuotasCampos" style="display:none; margin-top:8px;">
-          <label>Número de cuotas</label>
-          <input type="number" id="simNumCuotas" value="2" min="2" max="36">
+      <!-- MODO VOZ -->
+      <div id="registroVozWrap" style="display:none; margin-top:10px;">
+        <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Di algo como "Rossio compró hamburguesas con mi tarjeta BCP por 45 soles" y te prellenamos el formulario de "Un gasto" para que revises y guardes.</p>
+        <button class="btn btn-secondary" id="btnComandoVoz" onclick="iniciarComandoVoz()">🎙️ Hablar</button>
+        <div class="row-2" style="margin-top:8px;">
+          <input type="text" id="comandoVozManual" placeholder="...o escríbelo aquí si prefieres" onkeydown="if(event.key==='Enter') procesarComandoVozManual()">
+          <button class="btn btn-sm btn-secondary" style="width:auto;" onclick="procesarComandoVozManual()">Interpretar</button>
         </div>
-      </div>
-      <button class="btn btn-primary" onclick="simularCompra()">Simular</button>
-      <div id="simuladorResultado"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title with-action">
-        <span>Registrar movimiento</span>
-        <label class="check" style="font-size:12px;"><input type="checkbox" id="modoMultiple" onclick="toggleModoMultiple()"> ➕ Varios a la vez</label>
+        <div id="comandoVozTexto" style="font-size:13px; color:var(--text-dim); margin-top:8px;"></div>
       </div>
 
       <!-- MODO NORMAL (uno solo) -->
-      <div id="registroUnicoWrap">
+      <div id="registroUnicoWrap" style="margin-top:10px;">
         <div class="chip-row">
           <div class="chip active" data-tipo="Gasto" onclick="setTipo('Gasto')">Gasto</div>
           <div class="chip" data-tipo="Ingreso" onclick="setTipo('Ingreso')">Ingreso</div>
@@ -669,8 +648,15 @@
         <input type="file" id="inputFotoRegistrarCamara" accept="image/*" capture="environment" style="display:none;" onchange="agregarFotosBoletaUI('registrar', this.files); this.value='';">
         <input type="file" id="inputFotoRegistrarGaleria" accept="image/*" multiple style="display:none;" onchange="agregarFotosBoletaUI('registrar', this.files); this.value='';">
         <div id="fotosRegistrarPendientesWrap" style="display:none; margin-top:8px;"></div>
-        <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
-        <div class="field" id="fMetodoWrap"><label>Método</label><div id="fMetodoPicker" class="metodo-picker"></div><div id="fPagadorPicker" style="display:none;"></div></div>
+        <p style="font-size:11px; color:var(--text-dim); margin:6px 0 0;">Si escaneas la boleta, te llenamos el monto y la fecha solos — revisa el resto de todas formas.</p>
+
+        <div class="card-title" style="margin-top:20px;">Detalles</div>
+        <div class="field"><label>Categoría</label><div class="chip-row" id="fCategorias"></div></div>
+        <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" list="descripcionesDatalist" placeholder="ej. Almuerzo con Rappi"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="fFecha"></div>
+
+        <div class="card-title" style="margin-top:20px;">¿Cómo pagaste?</div>
+        <div class="field" id="fMetodoWrap"><div id="fMetodoPicker" class="metodo-picker"></div><div id="fPagadorPicker" style="display:none;"></div></div>
         <div id="avisoTarjetaAjena" style="display:none; font-size:13px; color:var(--accent2); margin-bottom:12px;"></div>
         <div class="field" id="cuotasWrap">
           <label class="check"><input type="checkbox" id="fCuotas" onclick="toggleCuotas()"> Pagar en cuotas</label>
@@ -682,8 +668,8 @@
             <div id="previaCuota" style="font-size:13px; color:var(--text-dim); margin-top:-6px;"></div>
           </div>
         </div>
-        <div class="field"><label>Fecha</label><input type="date" id="fFecha"></div>
-        <div class="field"><label>Descripción (opcional)</label><input type="text" id="fDescripcion" list="descripcionesDatalist" placeholder="ej. Almuerzo con Rappi"></div>
+
+        <div class="card-title" style="margin-top:20px;">¿Se divide con alguien?</div>
         <div class="field">
           <label>Etiquetas (opcional, separadas por coma)</label>
           <input type="text" id="fTags" list="tagsDatalist" placeholder="ej. viaje cusco, cumple mama">
@@ -706,11 +692,11 @@
             <div id="fCompartirResumen" style="font-size:13px; color:var(--text-dim);"></div>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="guardarMovimiento()">Guardar</button>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="guardarMovimiento()">Guardar</button>
       </div>
 
       <!-- MODO MÚLTIPLE (varias filas) -->
-      <div id="registroMultipleWrap" style="display:none;">
+      <div id="registroMultipleWrap" style="display:none; margin-top:10px;">
         <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Agrega tantas filas como necesites y presiona "Guardar todo" al final. La fecha de abajo es la general — cada fila puede tener su propia fecha si la necesitas distinta.</p>
         <div class="field"><label>Fecha general</label><input type="date" id="multiFecha"></div>
 
@@ -732,7 +718,38 @@
     </div>
   </div>
 
-  <!-- CALENDARIO -->
+  <div class="screen" id="screen-asesor">
+    <div class="card full-width">
+      <div class="card-title">🤖 Antes de comprar</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-6px;">Estas herramientas no registran nada por sí solas — te ayudan a decidir. Si al final compras, cada una tiene un botón para pasarte directo a "Registrar" con los datos ya cargados.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">¿Debo comprarlo? 🤖</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Rápido: escribe qué y cuánto, y te doy un veredicto corto.</p>
+      <div class="field"><input type="text" id="asesorTexto" placeholder="ej. Zapatillas por S/250"></div>
+      <button class="btn btn-secondary" onclick="consultarAsesor()">Consultar</button>
+      <div id="asesorResultado"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔮 Simulador de compra</div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-4px;">Más a fondo: mira el antes/después en tu balance, tu tarjeta y tu presupuesto ANTES de registrar nada de verdad.</p>
+      <input type="number" class="monto-input" id="simMonto" placeholder="S/ 0.00" inputmode="decimal">
+      <div class="field" style="margin-top:14px;"><label>Categoría</label><div class="chip-row" id="simCategorias"></div></div>
+      <div class="field"><label>Método</label><div class="chip-row" id="simMetodos"></div></div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="simCuotas" onclick="toggleSimCuotas()"> Pagar en cuotas</label>
+        <div id="simCuotasCampos" style="display:none; margin-top:8px;">
+          <label>Número de cuotas</label>
+          <input type="number" id="simNumCuotas" value="2" min="2" max="36">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="simularCompra()">Simular</button>
+      <div id="simuladorResultado"></div>
+    </div>
+  </div>
+
   <div class="screen" id="screen-calendario">
     <div class="card full-width cal-card">
       <div class="cal-header">
@@ -862,6 +879,7 @@
     <div class="nav-item active" data-s="inicio" onclick="irA('inicio')"><span class="ic">🏠</span>Inicio</div>
     <div class="nav-item" data-s="compras" onclick="irA('compras')"><span class="ic">🛒</span>Compras</div>
     <div class="nav-item" data-s="registrar" onclick="irA('registrar')"><span class="ic">➕</span>Registrar</div>
+    <div class="nav-item" data-s="asesor" onclick="irA('asesor')"><span class="ic">🤖</span>Asesor</div>
     <div class="nav-item" data-s="calendario" onclick="irA('calendario')"><span class="ic">📅</span>Calendario</div>
     <div class="nav-item" data-s="deudas" onclick="irA('deudas')"><span class="ic">🤝</span>Deudas</div>
     <div class="nav-item" data-s="historial" onclick="irA('historial')"><span class="ic">📜</span>Historial</div>
@@ -1806,6 +1824,7 @@ function irA(s){
   if (s === 'reportes') renderReportes();
   if (s === 'patrimonio') renderPatrimonio();
   if (s === 'registrar') aplicarDefaultsViaje();
+  if (s === 'asesor') renderSimuladorOpciones();
 }
 
 function misActivos(){ return state.activos; }
@@ -3296,7 +3315,6 @@ function renderFormOpciones(){
   document.getElementById('cuotasWrap').style.display = tipoActual === 'Gasto' ? 'block' : 'none';
   actualizarAvisoTarjetaAjena(leerMetodoPicker('fMetodoPicker'));
   renderPagadorPicker('fPagadorPicker', leerMetodoPicker('fMetodoPicker'));
-  renderSimuladorOpciones();
 }
 function avisarCategoriaOtros(categoria){
   const esOtros = categoria === 'Otros' || categoria === 'Otro';
@@ -3306,11 +3324,12 @@ function avisarCategoriaOtros(categoria){
 }
 
 let multiFilaContador = 0;
-function toggleModoMultiple(){
-  const on = document.getElementById('modoMultiple').checked;
-  document.getElementById('registroUnicoWrap').style.display = on ? 'none' : 'block';
-  document.getElementById('registroMultipleWrap').style.display = on ? 'block' : 'none';
-  if (on && !document.getElementById('multiFilasWrap').children.length){
+function cambiarModoRegistro(modo){
+  document.querySelectorAll('#registroModoTab .chip').forEach(c => c.classList.toggle('active', c.dataset.modo === modo));
+  document.getElementById('registroUnicoWrap').style.display = modo === 'uno' ? 'block' : 'none';
+  document.getElementById('registroMultipleWrap').style.display = modo === 'multiple' ? 'block' : 'none';
+  document.getElementById('registroVozWrap').style.display = modo === 'voz' ? 'block' : 'none';
+  if (modo === 'multiple' && !document.getElementById('multiFilasWrap').children.length){
     agregarFilaMulti(); agregarFilaMulti();
   }
 }
