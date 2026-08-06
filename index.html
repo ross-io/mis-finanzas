@@ -89,6 +89,10 @@
   nav.nav-mobile .nav-item{flex:1; min-width:48px; text-align:center; padding:5px 0; cursor:pointer; color:var(--text-dim); font-size:10px;}
   nav.nav-mobile .nav-item .ic{font-size:18px; display:block; margin-bottom:1px;}
   nav.nav-mobile .nav-item.active{color:var(--accent);}
+  .mas-nav-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .mas-nav-item{display:flex; flex-direction:column; align-items:center; gap:6px; background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:14px 6px; cursor:pointer; font-size:12px; color:var(--text); text-align:center;}
+  .mas-nav-item .ic{font-size:22px;}
+  .mas-nav-item:active{background:var(--accent); color:var(--accent-ink);}
 
   nav.nav-desktop{display:none; flex-direction:column; gap:4px; padding:8px;}
   nav.nav-desktop .nav-item{display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; cursor:pointer; color:var(--text-dim); font-size:14px; font-weight:600;}
@@ -877,14 +881,10 @@
 
   <nav class="nav-mobile">
     <div class="nav-item active" data-s="inicio" onclick="irA('inicio')"><span class="ic">🏠</span>Inicio</div>
-    <div class="nav-item" data-s="compras" onclick="irA('compras')"><span class="ic">🛒</span>Compras</div>
     <div class="nav-item" data-s="registrar" onclick="irA('registrar')"><span class="ic">➕</span>Registrar</div>
-    <div class="nav-item" data-s="asesor" onclick="irA('asesor')"><span class="ic">🤖</span>Asesor</div>
-    <div class="nav-item" data-s="calendario" onclick="irA('calendario')"><span class="ic">📅</span>Calendario</div>
-    <div class="nav-item" data-s="deudas" onclick="irA('deudas')"><span class="ic">🤝</span>Deudas</div>
+    <div class="nav-item" data-s="compras" onclick="irA('compras')"><span class="ic">🛒</span>Compras</div>
     <div class="nav-item" data-s="historial" onclick="irA('historial')"><span class="ic">📜</span>Historial</div>
-    <div class="nav-item" data-s="reportes" onclick="irA('reportes')"><span class="ic">📊</span>Reportes</div>
-    <div class="nav-item" data-s="patrimonio" onclick="irA('patrimonio')"><span class="ic">💰</span>Patrimonio</div>
+    <div class="nav-item nav-item-mas" onclick="abrirModal('modalMasNav')"><span class="ic">⋯</span>Más</div>
   </nav>
 </div>
 
@@ -993,6 +993,20 @@
     <div class="field"><label>Monto pagado (S/)</label><input type="number" id="pagoMonto" step="0.01"></div>
     <div class="field"><label>Comprobante (opcional — foto/captura del Yape, transferencia, etc.)</label><input type="file" id="pagoComprobante" accept="image/*"></div>
     <button class="btn btn-primary" onclick="confirmarPago()">Registrar pago</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalMasNav">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalMasNav')">✕</span>
+    <h3>Más opciones</h3>
+    <div class="mas-nav-grid">
+      <div class="mas-nav-item" onclick="irA('asesor')"><span class="ic">🤖</span>Asesor</div>
+      <div class="mas-nav-item" onclick="irA('calendario')"><span class="ic">📅</span>Calendario</div>
+      <div class="mas-nav-item" onclick="irA('deudas')"><span class="ic">🤝</span>Deudas</div>
+      <div class="mas-nav-item" onclick="irA('reportes')"><span class="ic">📊</span>Reportes</div>
+      <div class="mas-nav-item" onclick="irA('patrimonio')"><span class="ic">💰</span>Patrimonio</div>
+    </div>
   </div>
 </div>
 
@@ -1816,10 +1830,13 @@ function postData(action, data){
 }
 function puedoEditar(){ return state.miRol !== 'lector'; }
 
+const PANTALLAS_EN_MAS = ['asesor', 'calendario', 'deudas', 'reportes', 'patrimonio'];
 function irA(s){
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('screen-' + s).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.s === s));
+  document.querySelectorAll('.nav-item-mas').forEach(el => el.classList.toggle('active', PANTALLAS_EN_MAS.includes(s)));
+  cerrarModal('modalMasNav');
   if (s === 'calendario') renderCalendario();
   if (s === 'reportes') renderReportes();
   if (s === 'patrimonio') renderPatrimonio();
