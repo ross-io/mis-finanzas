@@ -706,9 +706,9 @@
 
         <div class="field">
           <label>📋 Pegar varias líneas de texto (opcional, más rápido)</label>
-          <textarea id="multiPegarTexto" rows="3" placeholder="Una compra por línea, ej:&#10;25.50 almuerzo&#10;Taxi 12&#10;Netflix 35.90" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:13px; font-family:inherit;"></textarea>
+          <textarea id="multiPegarTexto" rows="4" placeholder="Una compra por línea, ej:&#10;25.50 almuerzo&#10;27-Mar Rappi 46.28&#10;29-Mar Rappi 124.92" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--card2); color:var(--text); font-size:13px; font-family:inherit;"></textarea>
           <button type="button" class="btn btn-sm btn-secondary" style="margin-top:6px; width:auto;" onclick="convertirTextoAFilasMulti()">✨ Convertir en filas</button>
-          <p style="font-size:11px; color:var(--text-dim); margin:6px 0 0;">Detecta el monto y, si menciona una categoría, la reconoce sola — revisa antes de guardar, no es perfecto.</p>
+          <p style="font-size:11px; color:var(--text-dim); margin:6px 0 0;">Detecta el monto, la fecha (ej. "27-Mar" al inicio) y, si menciona una categoría, la reconoce sola — revisa antes de guardar, no es perfecto.</p>
         </div>
 
         <div id="multiFilasWrap"></div>
@@ -3379,6 +3379,7 @@ function agregarFilaMulti(valoresIniciales){
     document.getElementById(id+'_categoria').value = valoresIniciales.categoria || 'Comida';
     document.getElementById(id+'_desc').value = valoresIniciales.descripcion || '';
     if (valoresIniciales.tags) document.getElementById(id+'_tags').value = valoresIniciales.tags;
+    if (valoresIniciales.fecha) document.getElementById(id+'_fecha').value = valoresIniciales.fecha;
   }
   actualizarTotalMulti();
   return id;
@@ -3439,25 +3440,58 @@ function actualizarTotalMulti(){
 // categoría existente, la detecta sola — si no, la deja en "Otros" para
 // que la corrijas a mano. No guarda nada solo: siempre hay que revisar y
 // presionar "Guardar todo" después.
+const MESES_ABREV_MULTI = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,set:8,oct:9,nov:10,dic:11};
+function normalizarAnioMulti(txt){
+  const n = parseInt(txt);
+  return txt.length <= 2 ? 2000 + n : n;
+}
+function extraerFechaLineaMulti(texto){
+  let m = texto.match(/^\s*(\d{1,2})[\s\-\/]+([a-záéíóúñ]{3,9})\.?(?:[\s\-\/](\d{2,4}))?\s+/i);
+  if (m){
+    const dia = parseInt(m[1]);
+    const clave = m[2].toLowerCase().slice(0,3);
+    if (MESES_ABREV_MULTI[clave] !== undefined && dia >= 1 && dia <= 31){
+      const anio = m[3] ? normalizarAnioMulti(m[3]) : new Date().getFullYear();
+      const fecha = new Date(anio, MESES_ABREV_MULTI[clave], dia, 12, 0, 0);
+      return { fecha, resto: texto.slice(m[0].length) };
+    }
+  }
+  m = texto.match(/^\s*(\d{1,2})[\-\/](\d{1,2})(?:[\-\/](\d{2,4}))?\s+/);
+  if (m){
+    const dia = parseInt(m[1]), mes = parseInt(m[2]);
+    if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12){
+      const anio = m[3] ? normalizarAnioMulti(m[3]) : new Date().getFullYear();
+      const fecha = new Date(anio, mes - 1, dia, 12, 0, 0);
+      return { fecha, resto: texto.slice(m[0].length) };
+    }
+  }
+  return { fecha: null, resto: texto };
+}
 function parsearLineaMulti(linea){
   const trimmed = linea.trim();
   if (!trimmed) return null;
-  const matchMonto = trimmed.match(/(\d+([.,]\d{1,2})?)/);
+  const { fecha, resto: textoSinFecha } = extraerFechaLineaMulti(trimmed);
+  const matchMonto = textoSinFecha.match(/(\d+([.,]\d{1,2})?)/);
   if (!matchMonto) return null;
   const monto = parseFloat(matchMonto[1].replace(',','.'));
   if (!monto || monto <= 0) return null;
-  let resto = (trimmed.slice(0, matchMonto.index) + ' ' + trimmed.slice(matchMonto.index + matchMonto[0].length))
+  let resto = (textoSinFecha.slice(0, matchMonto.index) + ' ' + textoSinFecha.slice(matchMonto.index + matchMonto[0].length))
     .replace(/\s+/g,' ').trim().replace(/^[-,:.]+|[-,:.]+$/g,'').trim();
   let categoriaDetectada = null;
   const restoLower = resto.toLowerCase();
   for (const c of CATS.Gasto){
-    if (restoLower.includes(c.toLowerCase())){ categoriaDetectada = c; break; }
+    const palabras = c.toLowerCase().split('/');
+    if (palabras.some(p => restoLower.includes(p))){ categoriaDetectada = c; break; }
   }
   let descripcion = resto;
   if (categoriaDetectada){
-    descripcion = resto.replace(new RegExp(categoriaDetectada, 'i'), '').replace(/\s+/g,' ').trim();
+    const patronQuitar = categoriaDetectada.split('/').map(p => p.trim()).join('|');
+    descripcion = resto.replace(new RegExp(patronQuitar, 'i'), '').replace(/\s+/g,' ').trim();
   }
-  return { monto, categoria: categoriaDetectada || 'Otros', descripcion: descripcion || categoriaDetectada || '' };
+  return {
+    monto, categoria: categoriaDetectada || 'Otros', descripcion: descripcion || '',
+    fecha: fecha ? fecha.toISOString().slice(0,10) : undefined
+  };
 }
 function convertirTextoAFilasMulti(){
   const campo = document.getElementById('multiPegarTexto');
