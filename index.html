@@ -178,6 +178,11 @@
   .tarjeta-visual .tv-bottom{display:flex; justify-content:space-between; font-size:13px; font-weight:800; margin-bottom:8px;}
   .tarjeta-visual .bar-track{background:rgba(255,255,255,.25);}
   .tarjeta-visual .tv-ciclo{font-size:11px; opacity:.85; margin-top:8px;}
+  .tarjeta-visual .tv-movs-titulo{font-size:11px; text-transform:uppercase; letter-spacing:.05em; opacity:.75; font-weight:700; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.25);}
+  .tarjeta-visual .tv-movs{margin-top:6px;}
+  .tarjeta-visual .tv-mov-fila{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,.12);}
+  .tarjeta-visual .tv-mov-fila small{opacity:.7; font-size:11px;}
+  .tarjeta-visual .tv-movs-vacio{font-size:12px; opacity:.8; margin-top:6px;}
   .tarjeta-visual .tv-estado-btn{display:inline-block; margin-top:8px; background:rgba(255,255,255,.22); border:none; color:#fff; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer;}
 
   .color-swatches{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;}
@@ -892,11 +897,14 @@
 
   <div class="screen" id="screen-tarjetas">
     <div class="card full-width">
-      <div class="card-title">💳 Tus tarjetas</div>
+      <div class="card-title with-action">
+        <span>💳 Tus tarjetas</span>
+        <button class="btn btn-sm btn-secondary" onclick="toggleGestionarTarjetas()">⚙️ Editar tarjetas</button>
+      </div>
       <div id="tarjetasVisualTab"></div>
     </div>
 
-    <div class="card full-width">
+    <div class="card full-width" id="gestionarTarjetasWrap" style="display:none;">
       <div class="card-title with-action">
         <span>Gestionar tarjetas</span>
         <button class="btn btn-sm btn-secondary" onclick="agregarTarjeta()">+ Agregar tarjeta</button>
@@ -2629,46 +2637,79 @@ function oscurecerColor(hex, factor){
   const b = Math.max(0, Math.floor((n&255) * (1-factor)));
   return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
 }
+function movimientosDeTarjeta(nombreTarjeta, limite){
+  return state.movimientos
+    .filter(m => m.Metodo === nombreTarjeta || m.Metodo === 'Pago a ' + nombreTarjeta || m.Metodo === 'Reembolso de ' + nombreTarjeta)
+    .sort((a,b) => new Date(b.Fecha) - new Date(a.Fecha))
+    .slice(0, limite || 6);
+}
+function htmlMovimientosTarjeta(nombreTarjeta){
+  const movs = movimientosDeTarjeta(nombreTarjeta, 6);
+  if (!movs.length) return '<div class="tv-movs-vacio">Sin movimientos registrados en esta tarjeta todavía.</div>';
+  return movs.map(m => {
+    const fechaTxt = new Date(m.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+    const esPago = esPagoTarjeta(m), esReemb = esReembolsoTarjeta(m);
+    const signo = esPago ? '💳 ' : (esReemb ? '↩️ ' : '');
+    const color = (esPago || esReemb) ? 'rgba(255,255,255,.85)' : '#fff';
+    return '<div class="tv-mov-fila"><span>'+signo+(m.Descripcion||m.Categoria)+'<small> · '+fechaTxt+'</small></span><span style="color:'+color+';">S/'+Number(m.Monto).toFixed(2)+'</span></div>';
+  }).join('');
+}
+function htmlTarjetaVisual(t){
+  const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
+  const usado = Number(uso.usado || 0);
+  const limite = Number(t.limite||0);
+  const pct = limite > 0 ? Math.min(100,(usado/limite)*100) : 0;
+  const pctReal = limite > 0 ? (usado/limite)*100 : 0;
+  const color = t.color || PALETA_TARJETAS[0];
+  const ciclo = calcularCicloTarjeta(t);
+  const cicloTxt = ciclo
+    ? '<div class="tv-ciclo">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
+    : '<div class="tv-ciclo">⚠️ Sin día de cierre — configúralo en ⚙️ Editar tarjetas, abajo.</div>';
+  const desgloseTxt = (uso.arrastrado !== null && uso.arrastrado !== undefined)
+    ? '<div class="tv-ciclo">📦 Arrastre: S/'+Number(uso.arrastrado).toFixed(2)+' · 🆕 Nuevo: S/'+Number(uso.nuevo).toFixed(2)+'</div>'
+    : '';
+  const tasaInteres = Number(t.tasaInteresMensual || 0);
+  const interesTxt = (tasaInteres > 0 && uso.arrastrado > 0)
+    ? '<div class="tv-ciclo">🔥 ~S/'+(uso.arrastrado * tasaInteres/100).toFixed(2)+' de interés este ciclo ('+tasaInteres+'%/mes)</div>'
+    : '';
+  const limiteTxt = (limite > 0 && pctReal >= 100)
+    ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.25); border-radius:8px; padding:4px 8px; display:inline-block;">🚨 Límite superado por S/'+(usado-limite).toFixed(2)+'</div>'
+    : (limite > 0 && pctReal >= 85)
+      ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.2); border-radius:8px; padding:4px 8px; display:inline-block;">⚠️ Cerca del límite ('+pctReal.toFixed(0)+'% usado)</div>'
+      : '';
+  const nombreEsc = t.nombre.replace(/'/g,"\\'");
+  return '<div class="tarjeta-visual" style="background:linear-gradient(135deg, '+color+', '+oscurecerColor(color,0.35)+')">' +
+    '<div class="tv-top"><span>'+t.nombre+'</span><span class="tv-dueno">de '+t.propietario+'</span></div>' +
+    '<div class="tv-numero">•••• •••• •••• ••••</div>' +
+    '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
+    '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+(pctReal>=100?'#ef4444':pctReal>=85?'#fbbf24':'#ffffff')+';"></div></div>' +
+    limiteTxt + cicloTxt + desgloseTxt + interesTxt +
+    '<div style="display:flex; gap:8px; margin-top:10px;">' +
+    '<button class="tv-estado-btn" style="flex:1;" onclick="abrirPagoRapidoTarjeta(\''+nombreEsc+'\')">💰 Registrar pago</button>' +
+    '<button class="tv-estado-btn" style="flex:1;" onclick="abrirEstadoCuentaTarjeta(\''+nombreEsc+'\')">📄 Estado de cuenta</button>' +
+    '</div>' +
+    '<div class="tv-movs-titulo">📋 Movimientos recientes</div>' +
+    '<div class="tv-movs">' + htmlMovimientosTarjeta(t.nombre) + '</div>' +
+    '<button class="tv-estado-btn" style="width:100%; margin-top:8px;" onclick="irA(\'historial\')">Ver todo en Historial →</button>' +
+    '</div>';
+}
 function renderTarjetasResumen(){
   const wrap = document.getElementById('tarjetasVisualTab');
   if (!wrap) return;
-  const tarjetas = getTarjetasActivas();
-  if (!tarjetas.length){ wrap.innerHTML = '<div class="empty">Agrega tu primera tarjeta abajo</div>'; return; }
-  wrap.innerHTML = tarjetas.map(t => {
-    const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
-    const usado = Number(uso.usado || 0);
-    const limite = Number(t.limite||0);
-    const pct = limite > 0 ? Math.min(100,(usado/limite)*100) : 0;
-    const pctReal = limite > 0 ? (usado/limite)*100 : 0;
-    const color = t.color || PALETA_TARJETAS[0];
-    const ciclo = calcularCicloTarjeta(t);
-    const cicloTxt = ciclo
-      ? '<div class="tv-ciclo">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
-      : '<div class="tv-ciclo">⚠️ Sin día de cierre configurado — no puedo calcular arrastre ni fechas. Configúralo abajo.</div>';
-    const desgloseTxt = (uso.arrastrado !== null && uso.arrastrado !== undefined)
-      ? '<div class="tv-ciclo">📦 Arrastre de antes: S/'+Number(uso.arrastrado).toFixed(2)+' · 🆕 Nuevo desde el cierre: S/'+Number(uso.nuevo).toFixed(2)+' (esto es lo que cae en tu próximo recibo)</div>'
-      : '';
-    const tasaInteres = Number(t.tasaInteresMensual || 0);
-    const interesTxt = (tasaInteres > 0 && uso.arrastrado > 0)
-      ? '<div class="tv-ciclo">🔥 Si no pagas el arrastre, ~S/'+(uso.arrastrado * tasaInteres/100).toFixed(2)+' de interés este ciclo ('+tasaInteres+'%/mes)</div>'
-      : '';
-    const limiteTxt = (limite > 0 && pctReal >= 100)
-      ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.25); border-radius:8px; padding:4px 8px; display:inline-block;">🚨 Límite superado por S/'+(usado-limite).toFixed(2)+'</div>'
-      : (limite > 0 && pctReal >= 85)
-        ? '<div class="tv-ciclo" style="color:#fff; font-weight:800; background:rgba(0,0,0,.2); border-radius:8px; padding:4px 8px; display:inline-block;">⚠️ Cerca del límite ('+pctReal.toFixed(0)+'% usado)</div>'
-        : '';
-    return '<div class="tarjeta-visual" style="background:linear-gradient(135deg, '+color+', '+oscurecerColor(color,0.35)+')">' +
-      '<div class="tv-top"><span>'+t.nombre+'</span><span class="tv-dueno">de '+t.propietario+'</span></div>' +
-      '<div class="tv-numero">•••• •••• •••• ••••</div>' +
-      '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
-      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+(pctReal>=100?'#ef4444':pctReal>=85?'#fbbf24':'#ffffff')+';"></div></div>' +
-      limiteTxt + cicloTxt + desgloseTxt + interesTxt +
-      '<div style="display:flex; gap:8px; margin-top:10px;">' +
-      '<button class="tv-estado-btn" style="flex:1;" onclick="abrirPagoRapidoTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">💰 Registrar pago</button>' +
-      '<button class="tv-estado-btn" style="flex:1;" onclick="abrirEstadoCuentaTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">📄 Estado de cuenta</button>' +
-      '</div>' +
-      '</div>';
-  }).join('');
+  const todas = getTarjetasActivas();
+  if (!todas.length){ wrap.innerHTML = '<div class="empty">Agrega tu primera tarjeta abajo</div>'; return; }
+  const mias = todas.filter(t => t.propietario === MI_PERSONA);
+  const deOtros = todas.filter(t => t.propietario !== MI_PERSONA);
+
+  let html = '';
+  html += mias.length ? mias.map(htmlTarjetaVisual).join('') : '<div class="empty">Todavía no tienes tarjetas propias — agrégalas abajo, o si son de otro miembro, van a aparecer en la sección de abajo.</div>';
+
+  if (deOtros.length){
+    html += '<div class="card-title" style="margin-top:20px;">Tarjetas de otros miembros de la familia (solo para ver)</div>' +
+      '<p style="font-size:11px; color:var(--text-dim); margin-top:-8px; margin-bottom:10px;">Las ves porque son parte de la familia y pueden aparecer en gastos compartidos — no las puedes editar desde aquí, cada quien administra las suyas.</p>' +
+      deOtros.map(htmlTarjetaVisual).join('');
+  }
+  wrap.innerHTML = html;
 }
 function renderTarjetasResumenCompacto(){
   const wrap = document.getElementById('tarjetasResumen');
@@ -5482,6 +5523,11 @@ function editarPresupuesto(cat, valor){
 function setConfigLocal(clave, valor){
   const existe = state.config.some(c => c.Clave === clave);
   state.config = existe ? state.config.map(c => c.Clave===clave ? {...c, Valor:valor} : c) : [...state.config, {Clave:clave, Valor:valor}];
+}
+function toggleGestionarTarjetas(){
+  const wrap = document.getElementById('gestionarTarjetasWrap');
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+  if (wrap.style.display === 'block') renderListaTarjetasConfig();
 }
 function guardarConfigTarjetas(){
   postData('updateConfig', { Tarjetas: getConfig('Tarjetas') }).then(res => {
