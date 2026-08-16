@@ -405,6 +405,7 @@
     <div class="nav-item" data-s="historial" onclick="irA('historial')"><span class="ic">📜</span>Historial</div>
     <div class="nav-item" data-s="reportes" onclick="irA('reportes')"><span class="ic">📊</span>Reportes</div>
     <div class="nav-item" data-s="patrimonio" onclick="irA('patrimonio')"><span class="ic">💰</span>Patrimonio</div>
+    <div class="nav-item" data-s="tarjetas" onclick="irA('tarjetas')"><span class="ic">💳</span>Tarjetas</div>
   </nav>
 
   <header>
@@ -889,6 +890,23 @@
     </div>
   </div>
 
+  <div class="screen" id="screen-tarjetas">
+    <div class="card full-width">
+      <div class="card-title">💳 Tus tarjetas</div>
+      <div id="tarjetasVisualTab"></div>
+    </div>
+
+    <div class="card full-width">
+      <div class="card-title with-action">
+        <span>Gestionar tarjetas</span>
+        <button class="btn btn-sm btn-secondary" onclick="agregarTarjeta()">+ Agregar tarjeta</button>
+      </div>
+      <p style="font-size:12px; color:var(--text-dim); margin-top:-6px;">Nombre, dueño, límite, día de cierre y tasa de interés — configúralo aquí una vez y el resto de la app lo usa solo (calendario, avisos, estado de cuenta).</p>
+      <div id="listaTarjetasTab"></div>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="guardarConfigTarjetas()">Guardar cambios</button>
+    </div>
+  </div>
+
   <nav class="nav-mobile">
     <div class="nav-item active" data-s="inicio" onclick="irA('inicio')"><span class="ic">🏠</span>Inicio</div>
     <div class="nav-item" data-s="registrar" onclick="irA('registrar')"><span class="ic">➕</span>Registrar</div>
@@ -932,8 +950,8 @@
     </div>
 
     <div class="card-title" style="margin-top:18px;">Tarjetas de la familia</div>
-    <div id="listaTarjetasConfig"></div>
-    <button class="btn btn-sm btn-secondary" onclick="agregarTarjeta()">+ Agregar tarjeta</button>
+    <p style="font-size:12px; color:var(--text-dim);">Las tarjetas ahora se administran desde su propia pestaña, con más detalle y accesos rápidos.</p>
+    <button class="btn btn-sm btn-secondary" onclick="cerrarModal('modalConfig'); irA('tarjetas');">💳 Ir a Tarjetas</button>
 
     <div class="card-title" style="margin-top:18px;">Tu meta de ahorro</div>
     <div class="field"><input type="number" id="cMeta"></div>
@@ -1006,6 +1024,20 @@
   </div>
 </div>
 
+<div class="modal-bg" id="modalPagoRapidoTarjeta">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalPagoRapidoTarjeta')">✕</span>
+    <h3 id="pagoRapidoTitulo">Registrar pago</h3>
+    <div class="chip-row" id="pagoRapidoTipo">
+      <div class="chip active" data-tipo="pago" onclick="elegirTipoPagoRapido('pago', this)">💳 Pago/abono</div>
+      <div class="chip" data-tipo="reembolso" onclick="elegirTipoPagoRapido('reembolso', this)">↩️ Reembolso</div>
+    </div>
+    <div class="field"><label>Monto (S/)</label><input type="number" id="pagoRapidoMonto" step="0.01"></div>
+    <div class="field"><label>Fecha</label><input type="date" id="pagoRapidoFecha"></div>
+    <button class="btn btn-primary" onclick="registrarPagoRapidoTarjeta()">Registrar</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="modalMasNav">
   <div class="modal">
     <span class="close-x" onclick="cerrarModal('modalMasNav')">✕</span>
@@ -1016,6 +1048,7 @@
       <div class="mas-nav-item" onclick="irA('deudas')"><span class="ic">🤝</span>Deudas</div>
       <div class="mas-nav-item" onclick="irA('reportes')"><span class="ic">📊</span>Reportes</div>
       <div class="mas-nav-item" onclick="irA('patrimonio')"><span class="ic">💰</span>Patrimonio</div>
+      <div class="mas-nav-item" onclick="irA('tarjetas')"><span class="ic">💳</span>Tarjetas</div>
     </div>
   </div>
 </div>
@@ -1840,7 +1873,7 @@ function postData(action, data){
 }
 function puedoEditar(){ return state.miRol !== 'lector'; }
 
-const PANTALLAS_EN_MAS = ['asesor', 'calendario', 'deudas', 'reportes', 'patrimonio'];
+const PANTALLAS_EN_MAS = ['asesor', 'calendario', 'deudas', 'reportes', 'patrimonio', 'tarjetas'];
 function irA(s){
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('screen-' + s).classList.add('active');
@@ -1852,6 +1885,7 @@ function irA(s){
   if (s === 'patrimonio') renderPatrimonio();
   if (s === 'registrar') aplicarDefaultsViaje();
   if (s === 'asesor') renderSimuladorOpciones();
+  if (s === 'tarjetas'){ renderTarjetasResumen(); renderListaTarjetasConfig(); }
 }
 
 function misActivos(){ return state.activos; }
@@ -2428,7 +2462,7 @@ function renderInicio(){
   document.getElementById('ingresoMes').textContent = '↑ Ingresos S/' + ingresos.toFixed(2);
   document.getElementById('gastoMes').textContent = '↓ Gastos S/' + gastos.toFixed(2);
 
-  renderTarjetasResumen();
+  renderTarjetasResumenCompacto();
   renderAvisosLimiteTarjeta();
   renderPresupuestosResumen(delMes, ingresos);
   renderProyeccionFinMes(delMes, now);
@@ -2596,9 +2630,10 @@ function oscurecerColor(hex, factor){
   return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
 }
 function renderTarjetasResumen(){
-  const wrap = document.getElementById('tarjetasResumen');
+  const wrap = document.getElementById('tarjetasVisualTab');
+  if (!wrap) return;
   const tarjetas = getTarjetasActivas();
-  if (!tarjetas.length){ wrap.innerHTML = '<div class="empty">Agrega tus tarjetas en ⚙️ Configuración</div>'; return; }
+  if (!tarjetas.length){ wrap.innerHTML = '<div class="empty">Agrega tu primera tarjeta abajo</div>'; return; }
   wrap.innerHTML = tarjetas.map(t => {
     const uso = state.usoTarjetas[t.nombre] || { usado: 0 };
     const usado = Number(uso.usado || 0);
@@ -2609,7 +2644,7 @@ function renderTarjetasResumen(){
     const ciclo = calcularCicloTarjeta(t);
     const cicloTxt = ciclo
       ? '<div class="tv-ciclo">Cierra en ' + ciclo.diasHastaCierre + ' día(s) (' + ciclo.cierre.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + ') · si compras hoy, pagas hasta el ' + ciclo.fechaPagoSiComprasHoy.toLocaleDateString('es-PE',{day:'2-digit',month:'short'}) + '</div>'
-      : '';
+      : '<div class="tv-ciclo">⚠️ Sin día de cierre configurado — no puedo calcular arrastre ni fechas. Configúralo abajo.</div>';
     const desgloseTxt = (uso.arrastrado !== null && uso.arrastrado !== undefined)
       ? '<div class="tv-ciclo">📦 Arrastre de antes: S/'+Number(uso.arrastrado).toFixed(2)+' · 🆕 Nuevo desde el cierre: S/'+Number(uso.nuevo).toFixed(2)+' (esto es lo que cae en tu próximo recibo)</div>'
       : '';
@@ -2628,9 +2663,26 @@ function renderTarjetasResumen(){
       '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+(pctReal>=100?'#ef4444':pctReal>=85?'#fbbf24':'#ffffff')+';"></div></div>' +
       limiteTxt + cicloTxt + desgloseTxt + interesTxt +
-      '<button class="tv-estado-btn" onclick="abrirEstadoCuentaTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">📄 Ver estado de cuenta</button>' +
+      '<div style="display:flex; gap:8px; margin-top:10px;">' +
+      '<button class="tv-estado-btn" style="flex:1;" onclick="abrirPagoRapidoTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">💰 Registrar pago</button>' +
+      '<button class="tv-estado-btn" style="flex:1;" onclick="abrirEstadoCuentaTarjeta(\''+t.nombre.replace(/'/g,"\\'")+'\')">📄 Estado de cuenta</button>' +
+      '</div>' +
       '</div>';
   }).join('');
+}
+function renderTarjetasResumenCompacto(){
+  const wrap = document.getElementById('tarjetasResumen');
+  if (!wrap) return;
+  const tarjetas = getTarjetasActivas();
+  if (!tarjetas.length){ wrap.innerHTML = '<div class="empty">Agrega tus tarjetas desde 💳 Tarjetas</div>'; return; }
+  const totalUsado = tarjetas.reduce((s,t) => s + Number((state.usoTarjetas[t.nombre]||{}).usado||0), 0);
+  const totalLimite = tarjetas.reduce((s,t) => s + Number(t.limite||0), 0);
+  const pct = totalLimite > 0 ? Math.min(100,(totalUsado/totalLimite)*100) : 0;
+  const clase = pct>=90?'danger':pct>=70?'warn':'good';
+  wrap.innerHTML =
+    '<div class="bar-row"><div class="bar-label"><span>'+tarjetas.length+' tarjeta(s) activa(s)</span><span>S/'+totalUsado.toFixed(2)+' de S/'+totalLimite.toFixed(2)+'</span></div>' +
+    '<div class="bar-track"><div class="bar-fill '+clase+'" style="width:'+pct+'%"></div></div></div>' +
+    '<button class="btn btn-sm btn-secondary" style="margin-top:8px; width:auto;" onclick="irA(\'tarjetas\')">💳 Ver el detalle de cada tarjeta</button>';
 }
 function renderAvisosLimiteTarjeta(){
   const wrapCard = document.getElementById('avisosLimiteTarjetaWrap');
@@ -5339,7 +5391,7 @@ function quitarMiembro(i){
 function renderListaTarjetasConfig(){
   const tarjetas = getTarjetas();
   const nombres = getNombresMiembros();
-  document.getElementById('listaTarjetasConfig').innerHTML = tarjetas.map((t,i) => {
+  document.getElementById('listaTarjetasTab').innerHTML = tarjetas.map((t,i) => {
     const propietarioValido = nombres.includes(t.propietario);
     const opcionHuerfana = propietarioValido ? '' : '<option value="'+t.propietario+'" selected>⚠️ "'+t.propietario+'" (ya no existe, elige uno)</option>';
     const archivada = t.activa === false;
@@ -5430,6 +5482,47 @@ function editarPresupuesto(cat, valor){
 function setConfigLocal(clave, valor){
   const existe = state.config.some(c => c.Clave === clave);
   state.config = existe ? state.config.map(c => c.Clave===clave ? {...c, Valor:valor} : c) : [...state.config, {Clave:clave, Valor:valor}];
+}
+function guardarConfigTarjetas(){
+  postData('updateConfig', { Tarjetas: getConfig('Tarjetas') }).then(res => {
+    if (res.error) return;
+    showToast('Tarjetas guardadas ✅');
+    cargarDatos();
+  });
+}
+
+let pagoRapidoTarjetaActual = null;
+let pagoRapidoTipoActual = 'pago';
+function abrirPagoRapidoTarjeta(nombreTarjeta){
+  pagoRapidoTarjetaActual = nombreTarjeta;
+  pagoRapidoTipoActual = 'pago';
+  document.querySelectorAll('#pagoRapidoTipo .chip').forEach((c,i) => c.classList.toggle('active', i===0));
+  document.getElementById('pagoRapidoTitulo').textContent = 'Registrar pago — ' + nombreTarjeta;
+  document.getElementById('pagoRapidoMonto').value = '';
+  document.getElementById('pagoRapidoFecha').value = new Date().toISOString().slice(0,10);
+  abrirModal('modalPagoRapidoTarjeta');
+}
+function elegirTipoPagoRapido(tipo, el){
+  pagoRapidoTipoActual = tipo;
+  el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+function registrarPagoRapidoTarjeta(){
+  const monto = parseFloat(document.getElementById('pagoRapidoMonto').value);
+  if (!monto || monto <= 0){ showToast('Monto inválido'); return; }
+  const fechaTexto = document.getElementById('pagoRapidoFecha').value;
+  const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
+  const metodo = (pagoRapidoTipoActual === 'reembolso' ? 'Reembolso de ' : 'Pago a ') + pagoRapidoTarjetaActual;
+  const descripcion = (pagoRapidoTipoActual === 'reembolso' ? 'Reembolso ' : 'Pago ') + pagoRapidoTarjetaActual;
+  postData('addMovimiento', {
+    tipo: 'Gasto', categoria: 'Servicios', descripcion, metodo, monto,
+    persona: MI_PERSONA, compartido: [], fecha
+  }).then(res => {
+    if (res.error) return;
+    showToast('Registrado ✅');
+    cerrarModal('modalPagoRapidoTarjeta');
+    cargarDatos();
+  });
 }
 function guardarConfig(){
   const metas = getMetasAhorro();
