@@ -581,16 +581,16 @@
 
         <div id="formProductoWrap" style="display:none; margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
           <div class="field">
-            <label>Producto</label>
+            <label id="pNombreLabel">Producto</label>
             <input type="text" id="pNombre" list="productosDatalist" placeholder="Escribe para buscar, ej. Detergente" autocomplete="off" onchange="normalizarProductoElegido('pNombre')">
-            <p style="font-size:11px; color:var(--text-dim); margin:5px 0 0;">Escribe parte del nombre para ver productos usados en compras anteriores.</p>
+            <p style="font-size:11px; color:var(--text-dim); margin:5px 0 0;" id="pNombreHint">Escribe parte del nombre para ver productos usados en compras anteriores.</p>
           </div>
           <div class="field">
             <label class="check"><input type="checkbox" id="pEsTransporte" onclick="toggleCamposTransporte('p')"> 🚕 Es transporte (taxi, pasaje — no un producto del súper)</label>
           </div>
           <div class="field"><label>Foto del producto (opcional, ayuda a identificarlo si el nombre queda críptico)</label><input type="file" id="pFoto" accept="image/*"></div>
           <div class="row-2">
-            <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso" oninput="recalcularMontoTotal('p')"></div>
+            <div class="field" id="pCantidadWrap"><label>Cantidad (o peso en kg)</label><input type="number" id="pCantidad" value="1" min="0" step="0.01" placeholder="ej. 1, o 0.654 si es por peso" oninput="recalcularMontoTotal('p')"></div>
             <div class="field" id="pVitrinaWrap"><label>Precio en vitrina (S/ x unidad o x kg)</label><input type="number" id="pVitrina" step="0.01" oninput="recalcularPrecioDescuento('p')"></div>
           </div>
           <div class="field" id="pDescuentoWrap">
@@ -605,13 +605,13 @@
               </div>
             </div>
           </div>
-          <div class="field"><label>Precio real cobrado en caja (S/ x unidad o x kg)</label><input type="number" id="pReal" step="0.01" oninput="recalcularMontoTotal('p')"></div>
+          <div class="field" id="pRealWrap"><label>Precio real cobrado en caja (S/ x unidad o x kg)</label><input type="number" id="pReal" step="0.01" oninput="recalcularMontoTotal('p')"></div>
           <div class="field">
-            <label>Monto total de este producto (S/)</label>
+            <label id="pMontoTotalLabel">Monto total de este producto (S/)</label>
             <input type="number" id="pMontoTotal" step="0.01">
-            <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
+            <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;" id="pMontoTotalHint">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
           </div>
-          <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;">Para frutas/verduras u otros por peso: pon el peso en Cantidad (ej. 0.654 kg) y el precio POR KG en los campos de precio — la app multiplica sola.</p>
+          <p style="font-size:11px; color:var(--text-dim); margin-top:-8px;" id="pPesoHint">Para frutas/verduras u otros por peso: pon el peso en Cantidad (ej. 0.654 kg) y el precio POR KG en los campos de precio — la app multiplica sola.</p>
           <div class="field"><label>¿Cómo se divide?</label><div id="pDivisionPicker"></div></div>
           <button class="btn btn-primary" onclick="guardarProductoCompra()">Guardar producto</button>
         </div>
@@ -1148,7 +1148,7 @@
     <h3 id="editarProductoTitulo">Editar producto</h3>
     <div id="editarProductoCamposPrecio">
       <div class="field">
-        <label>Producto</label>
+        <label id="epNombreLabel">Producto</label>
         <input type="text" id="epNombre" list="productosDatalist" placeholder="Escribe para buscar un producto" autocomplete="off" onchange="normalizarProductoElegido('epNombre')">
       </div>
       <div class="field">
@@ -1160,7 +1160,7 @@
         <input type="file" id="epFoto" accept="image/*" onchange="subirFotoProductoUI(this.files[0])">
       </div>
       <div class="row-2">
-        <div class="field"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
+        <div class="field" id="epCantidadWrap"><label>Cantidad (o peso en kg)</label><input type="number" id="epCantidad" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
         <div class="field" id="epVitrinaWrap"><label>Precio vitrina (S/ x unidad o x kg)</label><input type="number" id="epVitrina" step="0.01" oninput="recalcularPrecioDescuento('ep')"></div>
       </div>
       <div class="field" id="epDescuentoWrap">
@@ -1175,11 +1175,11 @@
           </div>
         </div>
       </div>
-      <div class="field"><label>Precio real (S/ x unidad o x kg)</label><input type="number" id="epReal" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
+      <div class="field" id="epRealWrap"><label>Precio real (S/ x unidad o x kg)</label><input type="number" id="epReal" step="0.01" oninput="recalcularMontoTotal('ep')"></div>
       <div class="field">
-        <label>Monto total de este producto (S/)</label>
+        <label id="epMontoTotalLabel">Monto total de este producto (S/)</label>
         <input type="number" id="epMontoTotal" step="0.01">
-        <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
+        <p style="font-size:11px; color:var(--text-dim); margin:4px 0 0;" id="epMontoTotalHint">Se calcula solo (cantidad × precio). Si no calza exacto con la boleta, corrígelo aquí y se usa este monto.</p>
       </div>
     </div>
     <div class="field"><label>¿Cómo se divide? (puedes moverlo cuando quieras)</label><div id="epDivisionPicker"></div></div>
@@ -1196,6 +1196,11 @@
     <h3>Finalizar compra</h3>
     <p id="finalizarResumen" style="color:var(--text-dim); font-size:14px;"></p>
     <div class="field"><label>¿Con qué pagaste el súper?</label><div id="finalizarMetodosPicker" class="metodo-picker"></div><div id="finalizarPagadorSuper" style="display:none;"></div></div>
+    <div class="field">
+      <label>🏷️ ¿Tuviste algún descuento sobre el TOTAL de la compra? (opcional)</label>
+      <input type="number" id="finalizarDescuentoTotal" step="0.01" placeholder="ej. 15.00 — cupón, promoción de Rappi, etc.">
+      <p style="font-size:11px; color:var(--text-dim); margin:5px 0 0;">Solo para descuentos que aplican a toda la compra (no a un producto en particular) — ej. Rappi te descuenta S/15 del pedido de Metro. Si el descuento es de UN producto específico, mejor usa "Tiene descuento" en ese producto.</p>
+    </div>
     <div class="field" id="finalizarTransporteWrap" style="display:none;">
       <label>🚕 ¿Con qué pagaste el transporte? (puede ser distinto)</label>
       <div id="finalizarMetodosTransportePicker" class="metodo-picker"></div>
@@ -4511,6 +4516,7 @@ function toggleFormProducto(){
     document.getElementById('pDescuentoWrap').style.display = 'block';
     document.getElementById('pDescuentoCampos').style.display = 'none';
     document.querySelectorAll('#pDescuentoCampos .chip[data-tipo]').forEach(c => c.classList.toggle('active', c.dataset.tipo==='monto'));
+    toggleCamposTransporte('p');
     renderDivisionPicker('pDivisionPicker', '', []);
   }
 }
@@ -4523,9 +4529,33 @@ function toggleCamposTransporte(prefix){
   const esTransporte = document.getElementById(prefix+'EsTransporte').checked;
   document.getElementById(prefix+'VitrinaWrap').style.display = esTransporte ? 'none' : 'block';
   document.getElementById(prefix+'DescuentoWrap').style.display = esTransporte ? 'none' : 'block';
+  const cantidadWrap = document.getElementById(prefix+'CantidadWrap');
+  if (cantidadWrap) cantidadWrap.style.display = esTransporte ? 'none' : 'block';
+  const realWrap = document.getElementById(prefix+'RealWrap');
+  if (realWrap) realWrap.style.display = esTransporte ? 'none' : 'block';
+  const pesoHint = document.getElementById(prefix+'PesoHint');
+  if (pesoHint) pesoHint.style.display = esTransporte ? 'none' : 'block';
+  const montoHint = document.getElementById(prefix+'MontoTotalHint');
+  if (montoHint) montoHint.style.display = esTransporte ? 'none' : 'block';
+  const nombreHint = document.getElementById(prefix+'NombreHint');
+  if (nombreHint) nombreHint.style.display = esTransporte ? 'none' : 'block';
+
+  const label = document.getElementById(prefix+'NombreLabel');
+  const input = document.getElementById(prefix+'Nombre');
+  if (label && input){
+    label.textContent = esTransporte ? 'Descripción del transporte' : 'Producto';
+    input.placeholder = esTransporte ? 'ej. Taxi al mercado, pasaje bus' : (prefix==='p' ? 'Escribe para buscar, ej. Detergente' : 'Escribe para buscar un producto');
+  }
+  const montoLabel = document.getElementById(prefix+'MontoTotalLabel');
+  if (montoLabel) montoLabel.textContent = esTransporte ? 'Monto del transporte (S/)' : 'Monto total de este producto (S/)';
+
+  const cantidadInput = document.getElementById(prefix+'Cantidad');
   if (esTransporte){
     document.getElementById(prefix+'Descuento').checked = false;
     document.getElementById(prefix+'DescuentoCampos').style.display = 'none';
+    if (cantidadInput) cantidadInput.value = 1;
+  } else if (cantidadInput && !cantidadInput.value){
+    cantidadInput.value = 1;
   }
 }
 function elegirTipoDescuento(prefix, tipo){
@@ -4947,6 +4977,7 @@ function abrirFinalizarCompra(){
     (productosTransporte.length ? ' · 🚕 Transporte: S/' + totalTransporte.toFixed(2) : '') +
     (sinAsignar.length ? ' · ⚠️ ' + sinAsignar.length + ' sin asignar todavía (quedarán como tuyos)' : '');
   document.getElementById('finalizarFoto').value = '';
+  document.getElementById('finalizarDescuentoTotal').value = '';
 
   document.getElementById('finalizarPagadorSuper').dataset.valor = MI_PERSONA;
   document.getElementById('finalizarPagadorTransporte').dataset.valor = MI_PERSONA;
@@ -4967,9 +4998,10 @@ function confirmarFinalizarCompra(){
   const pagadorSuper = leerPagador('finalizarPagadorSuper');
   const pagadorTransporte = hayTransporte ? leerPagador('finalizarPagadorTransporte') : undefined;
   const archivo = document.getElementById('finalizarFoto').files[0];
-  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, metodoTransporte, persona: MI_PERSONA, pagadorSuper, pagadorTransporte }).then(res => {
+  const descuentoTotal = parseFloat(document.getElementById('finalizarDescuentoTotal').value) || 0;
+  postData('finalizarCompra', { compraId: compraSeleccionadaId, metodo, metodoTransporte, persona: MI_PERSONA, pagadorSuper, pagadorTransporte, descuentoTotal }).then(res => {
     if (!res.success) return;
-    showToast('Compra finalizada ✅ Gasto de S/' + Number(res.total).toFixed(2) + ' registrado');
+    showToast('Compra finalizada ✅ Gasto de S/' + Number(res.total).toFixed(2) + ' registrado' + (descuentoTotal>0 ? ' (ya con el descuento de S/'+descuentoTotal.toFixed(2)+' aplicado)' : ''));
     cerrarModal('modalFinalizarCompra');
     if (archivo){ subirFoto(archivo, compraSeleccionadaId); } else { cargarDatosYAbrirCompra(compraSeleccionadaId); }
   });
