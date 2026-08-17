@@ -1141,6 +1141,17 @@
   </div>
 </div>
 
+<div class="modal-bg" id="modalEditarCompra">
+  <div class="modal">
+    <span class="close-x" onclick="cerrarModal('modalEditarCompra')">✕</span>
+    <h3>Editar compra</h3>
+    <div class="field"><label>Nombre / lugar</label><input type="text" id="ecNombre"></div>
+    <div class="field"><label>Fecha de la compra</label><input type="date" id="ecFecha"></div>
+    <div class="field"><label>¿Quién la creó / la hizo?</label><div class="chip-row" id="ecPersona"></div></div>
+    <button class="btn btn-primary" onclick="guardarEdicionCompra()">Guardar cambios</button>
+  </div>
+</div>
+
 <!-- MODAL EDITAR PRODUCTO -->
 <div class="modal-bg" id="modalEditarProducto">
   <div class="modal">
@@ -5041,15 +5052,26 @@ function subirFoto(archivo, compraId){
 function editarCompraActual(){
   const compra = compraActual();
   if (!compra) return;
-  const nuevoNombre = prompt('Nombre de la compra:', compra.Nombre);
-  if (nuevoNombre === null) return;
-  const fechaActual = new Date(compra.Fecha).toISOString().slice(0,10);
-  const nuevaFecha = prompt('Fecha de la compra (AAAA-MM-DD):', fechaActual);
-  if (nuevaFecha === null) return;
-  const fechaISO = nuevaFecha.trim() ? new Date(nuevaFecha.trim()+'T12:00:00').toISOString() : compra.Fecha;
-  postData('updateCompra', { id: compraSeleccionadaId, nombre: nuevoNombre.trim() || compra.Nombre, fecha: fechaISO }).then(res => {
+  document.getElementById('ecNombre').value = compra.Nombre || '';
+  document.getElementById('ecFecha').value = new Date(compra.Fecha).toISOString().slice(0,10);
+  const wrap = document.getElementById('ecPersona');
+  wrap.innerHTML = getNombresMiembros().map(n =>
+    '<div class="chip'+(n===compra.Persona?' active':'')+'" onclick="document.querySelectorAll(\'#ecPersona .chip\').forEach(c=>c.classList.remove(\'active\')); this.classList.add(\'active\');">'+n+'</div>'
+  ).join('');
+  abrirModal('modalEditarCompra');
+}
+function guardarEdicionCompra(){
+  const nombre = document.getElementById('ecNombre').value.trim();
+  const fechaTexto = document.getElementById('ecFecha').value;
+  if (!nombre){ showToast('Escribe un nombre'); return; }
+  if (!fechaTexto){ showToast('Elige una fecha'); return; }
+  const fechaISO = new Date(fechaTexto + 'T12:00:00').toISOString();
+  const personaEl = document.querySelector('#ecPersona .chip.active');
+  const persona = personaEl ? personaEl.textContent : MI_PERSONA;
+  postData('updateCompra', { id: compraSeleccionadaId, nombre, fecha: fechaISO, persona }).then(res => {
     if (res.error) return;
     showToast('Compra actualizada ✅');
+    cerrarModal('modalEditarCompra');
     cargarDatosYAbrirCompra(compraSeleccionadaId);
   });
 }
