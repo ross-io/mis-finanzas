@@ -183,6 +183,17 @@
   .tarjeta-visual .tv-mov-fila{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,.12);}
   .tarjeta-visual .tv-mov-fila small{opacity:.7; font-size:11px;}
   .tarjeta-visual .tv-movs-vacio{font-size:12px; opacity:.8; margin-top:6px;}
+  .tarjeta-visual .tv-acciones{display:flex; justify-content:space-around; gap:6px; margin-top:14px;}
+  .tarjeta-visual .tv-accion{display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; flex:1;}
+  .tarjeta-visual .tv-accion span:last-child{font-size:10.5px; font-weight:700; opacity:.9;}
+  .tarjeta-visual .tv-accion-ic{width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; font-size:18px; transition:background .15s;}
+  .tarjeta-visual .tv-accion:active .tv-accion-ic{background:rgba(255,255,255,.4);}
+  .tarjeta-visual .tv-mov-fila{display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.12);}
+  .tarjeta-visual .tv-mov-icono{width:30px; height:30px; min-width:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px;}
+  .tarjeta-visual .tv-mov-info{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .tarjeta-visual .tv-mov-info b{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .tarjeta-visual .tv-mov-info small{font-size:10.5px; opacity:.7;}
+  .tarjeta-visual .tv-mov-monto{font-size:12.5px; font-weight:700; white-space:nowrap;}
   .tarjeta-visual .tv-estado-btn{display:inline-block; margin-top:8px; background:rgba(255,255,255,.22); border:none; color:#fff; font-size:11px; font-weight:700; padding:5px 10px; border-radius:999px; cursor:pointer;}
 
   .color-swatches{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;}
@@ -2649,9 +2660,14 @@ function htmlMovimientosTarjeta(nombreTarjeta){
   return movs.map(m => {
     const fechaTxt = new Date(m.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
     const esPago = esPagoTarjeta(m), esReemb = esReembolsoTarjeta(m);
-    const signo = esPago ? '💳 ' : (esReemb ? '↩️ ' : '');
-    const color = (esPago || esReemb) ? 'rgba(255,255,255,.85)' : '#fff';
-    return '<div class="tv-mov-fila"><span>'+signo+(m.Descripcion||m.Categoria)+'<small> · '+fechaTxt+'</small></span><span style="color:'+color+';">S/'+Number(m.Monto).toFixed(2)+'</span></div>';
+    const reduceDeuda = esPago || esReemb;
+    const icono = esPago ? '💳' : (esReemb ? '↩️' : (ICONOS[m.Categoria] || '🛒'));
+    const signo = reduceDeuda ? '+' : '−';
+    return '<div class="tv-mov-fila">' +
+      '<span class="tv-mov-icono" style="background:'+(reduceDeuda?'rgba(74,222,128,.25)':'rgba(255,255,255,.18)')+';">'+icono+'</span>' +
+      '<span class="tv-mov-info"><b>'+(m.Descripcion||m.Categoria)+'</b><small>'+fechaTxt+'</small></span>' +
+      '<span class="tv-mov-monto" style="color:'+(reduceDeuda?'#86efac':'#fff')+';">'+signo+' S/'+Number(m.Monto).toFixed(2)+'</span>' +
+      '</div>';
   }).join('');
 }
 function htmlTarjetaVisual(t){
@@ -2684,9 +2700,10 @@ function htmlTarjetaVisual(t){
     '<div class="tv-bottom"><span>S/'+usado.toFixed(2)+'</span><span>de S/'+limite.toFixed(2)+'</span></div>' +
     '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+(pctReal>=100?'#ef4444':pctReal>=85?'#fbbf24':'#ffffff')+';"></div></div>' +
     limiteTxt + cicloTxt + desgloseTxt + interesTxt +
-    '<div style="display:flex; gap:8px; margin-top:10px;">' +
-    '<button class="tv-estado-btn" style="flex:1;" onclick="abrirPagoRapidoTarjeta(\''+nombreEsc+'\')">💰 Registrar pago</button>' +
-    '<button class="tv-estado-btn" style="flex:1;" onclick="abrirEstadoCuentaTarjeta(\''+nombreEsc+'\')">📄 Estado de cuenta</button>' +
+    '<div class="tv-acciones">' +
+      '<div class="tv-accion" onclick="abrirPagoRapidoTarjeta(\''+nombreEsc+'\')"><span class="tv-accion-ic">💰</span><span>Pagar</span></div>' +
+      '<div class="tv-accion" onclick="abrirEstadoCuentaTarjeta(\''+nombreEsc+'\')"><span class="tv-accion-ic">📄</span><span>Detalle</span></div>' +
+      '<div class="tv-accion" onclick="editarEstaTarjeta(\''+nombreEsc+'\')"><span class="tv-accion-ic">✏️</span><span>Editar</span></div>' +
     '</div>' +
     '<div class="tv-movs-titulo">📋 Movimientos recientes</div>' +
     '<div class="tv-movs">' + htmlMovimientosTarjeta(t.nombre) + '</div>' +
@@ -5432,7 +5449,7 @@ function renderListaTarjetasConfig(){
     const botonEstado = archivada
       ? '<button class="btn btn-sm btn-secondary" style="width:auto;" onclick="reactivarTarjeta('+i+')">♻️ Reactivar</button>'
       : '<button class="btn btn-sm btn-secondary" style="width:auto;" onclick="archivarTarjeta('+i+')">🗄️ Archivar</button>';
-    return '<div class="tarjeta-block"'+(archivada?' style="opacity:.55;"':'')+'>' +
+    return '<div class="tarjeta-block" id="tarjetaEditBlock_'+idTarjetaSlug(t.nombre)+'"'+(archivada?' style="opacity:.55;"':'')+'>' +
     (archivada ? '<div style="font-size:11px; color:var(--text-dim); margin-bottom:6px;">📦 Archivada — ya no aparece para gastos nuevos, pero su historial sigue intacto.</div>' : '') +
     '<div class="tarjeta-row"><input type="text" value="'+t.nombre+'" onchange="editarTarjeta('+i+',\'nombre\',this.value)" placeholder="Nombre" style="flex:1.4;">' +
     '<select onchange="editarTarjeta('+i+',\'propietario\',this.value)" style="flex:1;'+(propietarioValido?'':' color:var(--danger); font-weight:700;')+'">' + opcionHuerfana +
@@ -5516,6 +5533,16 @@ function editarPresupuesto(cat, valor){
 function setConfigLocal(clave, valor){
   const existe = state.config.some(c => c.Clave === clave);
   state.config = existe ? state.config.map(c => c.Clave===clave ? {...c, Valor:valor} : c) : [...state.config, {Clave:clave, Valor:valor}];
+}
+function idTarjetaSlug(nombre){ return String(nombre).replace(/[^a-zA-Z0-9]/g,'_'); }
+function editarEstaTarjeta(nombreTarjeta){
+  const wrap = document.getElementById('gestionarTarjetasWrap');
+  wrap.style.display = 'block';
+  renderListaTarjetasConfig();
+  setTimeout(() => {
+    const el = document.getElementById('tarjetaEditBlock_' + idTarjetaSlug(nombreTarjeta));
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
 }
 function toggleGestionarTarjetas(){
   const wrap = document.getElementById('gestionarTarjetasWrap');
