@@ -4800,27 +4800,37 @@ function confirmarSiSubioPrecio(nombreProducto, precioNuevo, excluirId){
 
 function guardarProductoCompra(){
   const nombre = document.getElementById('pNombre').value.trim();
-  const cantidad = parseFloat(document.getElementById('pCantidad').value);
-  const vitrina = parseFloat(document.getElementById('pVitrina').value) || 0;
-  let real = parseFloat(document.getElementById('pReal').value);
-  const descuento = document.getElementById('pDescuento').checked;
+  const esTransporte = document.getElementById('pEsTransporte').checked;
   const archivoFoto = document.getElementById('pFoto').files[0];
-  if (!nombre){ showToast('Escribe el nombre del producto'); return; }
-  if (!cantidad || cantidad <= 0){ showToast('Cantidad inválida'); return; }
-  if (!real || real <= 0){ showToast('Ingresa el precio real cobrado en caja'); return; }
-  const montoCampo = parseFloat(document.getElementById('pMontoTotal').value) || 0;
-  if (montoCampo > 0 && Math.abs(montoCampo - cantidad*real) > 0.005) real = montoCampo / cantidad;
-  if (!confirmarSiSubioPrecio(nombre, real, null)) return;
+  if (!nombre){ showToast(esTransporte ? 'Escribe una descripción del transporte' : 'Escribe el nombre del producto'); return; }
+
+  let cantidad, real, vitrina = 0, descuento = false;
+  if (esTransporte){
+    const montoTransporte = parseFloat(document.getElementById('pMontoTotal').value);
+    if (!montoTransporte || montoTransporte <= 0){ showToast('Ingresa el monto del transporte'); return; }
+    cantidad = 1;
+    real = montoTransporte;
+  } else {
+    cantidad = parseFloat(document.getElementById('pCantidad').value);
+    vitrina = parseFloat(document.getElementById('pVitrina').value) || 0;
+    real = parseFloat(document.getElementById('pReal').value);
+    descuento = document.getElementById('pDescuento').checked;
+    if (!cantidad || cantidad <= 0){ showToast('Cantidad inválida'); return; }
+    if (!real || real <= 0){ showToast('Ingresa el precio real cobrado en caja'); return; }
+    const montoCampo = parseFloat(document.getElementById('pMontoTotal').value) || 0;
+    if (montoCampo > 0 && Math.abs(montoCampo - cantidad*real) > 0.005) real = montoCampo / cantidad;
+    if (!confirmarSiSubioPrecio(nombre, real, null)) return;
+  }
   const division = leerDivisionPicker('pDivisionPicker');
   postData('addProductoCompra', {
     compraId: compraSeleccionadaId, producto: nombre, cantidad, precioVitrina: vitrina, precioReal: real,
     tieneDescuento: descuento, tipoDivision: division.tipo, miembros: division.miembros,
     descuentoTipo: descuento ? tipoDescuentoActivo('p') : '', descuentoValor: descuento ? (parseFloat(document.getElementById('pDescuentoValor').value)||0) : 0,
-    esTransporte: document.getElementById('pEsTransporte').checked
+    esTransporte
   }).then(res => {
     if (res.error) return;
     const terminar = () => {
-      showToast('Producto agregado ✅');
+      showToast(esTransporte ? 'Transporte agregado ✅' : 'Producto agregado ✅');
       document.getElementById('formProductoWrap').style.display = 'none';
       cargarDatosYAbrirCompra(compraSeleccionadaId);
     };
@@ -4928,17 +4938,28 @@ function guardarEdicionProducto(){
   const data = { id: productoEditandoId, tipoDivision: division.tipo, miembros: division.miembros };
   if (!cerrada){
     data.producto = document.getElementById('epNombre').value.trim();
-    data.cantidad = parseFloat(document.getElementById('epCantidad').value);
-    data.precioVitrina = parseFloat(document.getElementById('epVitrina').value) || 0;
-    let precioReal = parseFloat(document.getElementById('epReal').value);
-    const montoCampo = parseFloat(document.getElementById('epMontoTotal').value) || 0;
-    if (montoCampo > 0 && data.cantidad > 0 && Math.abs(montoCampo - data.cantidad*precioReal) > 0.005) precioReal = montoCampo / data.cantidad;
-    data.precioReal = precioReal;
-    data.tieneDescuento = document.getElementById('epDescuento').checked;
-    data.descuentoTipo = data.tieneDescuento ? tipoDescuentoActivo('ep') : '';
-    data.descuentoValor = data.tieneDescuento ? (parseFloat(document.getElementById('epDescuentoValor').value)||0) : 0;
     data.esTransporte = document.getElementById('epEsTransporte').checked;
-    if (!confirmarSiSubioPrecio(data.producto, precioReal, productoEditandoId)) return;
+    if (data.esTransporte){
+      const montoTransporte = parseFloat(document.getElementById('epMontoTotal').value);
+      if (!montoTransporte || montoTransporte <= 0){ showToast('Ingresa el monto del transporte'); return; }
+      data.cantidad = 1;
+      data.precioVitrina = 0;
+      data.precioReal = montoTransporte;
+      data.tieneDescuento = false;
+      data.descuentoTipo = '';
+      data.descuentoValor = 0;
+    } else {
+      data.cantidad = parseFloat(document.getElementById('epCantidad').value);
+      data.precioVitrina = parseFloat(document.getElementById('epVitrina').value) || 0;
+      let precioReal = parseFloat(document.getElementById('epReal').value);
+      const montoCampo = parseFloat(document.getElementById('epMontoTotal').value) || 0;
+      if (montoCampo > 0 && data.cantidad > 0 && Math.abs(montoCampo - data.cantidad*precioReal) > 0.005) precioReal = montoCampo / data.cantidad;
+      data.precioReal = precioReal;
+      data.tieneDescuento = document.getElementById('epDescuento').checked;
+      data.descuentoTipo = data.tieneDescuento ? tipoDescuentoActivo('ep') : '';
+      data.descuentoValor = data.tieneDescuento ? (parseFloat(document.getElementById('epDescuentoValor').value)||0) : 0;
+      if (!confirmarSiSubioPrecio(data.producto, precioReal, productoEditandoId)) return;
+    }
   }
   postData('updateProductoCompra', data).then(() => {
     showToast('Producto actualizado ✅');
