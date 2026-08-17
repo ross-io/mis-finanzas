@@ -645,6 +645,7 @@
 
       <!-- MODO NORMAL (uno solo) -->
       <div id="registroUnicoWrap" style="margin-top:10px;">
+        <div id="resumenHoyRegistrar" style="display:none; margin-bottom:14px;"></div>
         <div class="chip-row">
           <div class="chip active" data-tipo="Gasto" onclick="setTipo('Gasto')">Gasto</div>
           <div class="chip" data-tipo="Ingreso" onclick="setTipo('Ingreso')">Ingreso</div>
@@ -1888,7 +1889,7 @@ function irA(s){
   if (s === 'calendario') renderCalendario();
   if (s === 'reportes') renderReportes();
   if (s === 'patrimonio') renderPatrimonio();
-  if (s === 'registrar') aplicarDefaultsViaje();
+  if (s === 'registrar'){ aplicarDefaultsViaje(); renderResumenHoyRegistrar(); }
   if (s === 'asesor') renderSimuladorOpciones();
   if (s === 'tarjetas'){ renderTarjetasResumen(); renderListaTarjetasConfig(); }
 }
@@ -3991,7 +3992,39 @@ function previsualizarCuota(){
     ? 'S/' + cuota.toFixed(2) + ' x ' + n + ' meses (empezando este mes)'
     : 'Ingresa el monto total arriba para ver la cuota mensual';
 }
+function renderResumenHoyRegistrar(){
+  const wrap = document.getElementById('resumenHoyRegistrar');
+  if (!wrap) return;
+  const hoyTexto = new Date().toISOString().slice(0,10);
+  const deHoy = misMovimientos().filter(m => new Date(m.Fecha).toISOString().slice(0,10) === hoyTexto).sort((a,b) => new Date(b.Fecha)-new Date(a.Fecha));
+  if (!deHoy.length){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const gastos = deHoy.filter(m => m.Tipo==='Gasto' && !esMovimientoTarjetaEspecial(m)).length;
+  const ingresos = deHoy.filter(m => m.Tipo==='Ingreso').length;
+  wrap.innerHTML = '<div class="card-title" style="margin-top:0;">📋 Ya registraste hoy (' + deHoy.length + ')</div>' +
+    deHoy.slice(0,4).map(m => {
+      const icono = esPagoTarjeta(m) ? '💳' : (esReembolsoTarjeta(m) ? '↩️' : (ICONOS[m.Categoria]||'💸'));
+      const signo = m.Tipo === 'Ingreso' ? 'pos' : 'neg';
+      const prefijo = m.Tipo === 'Ingreso' ? '+' : '-';
+      return '<div class="mov-item"><div class="mov-left"><div class="mov-icon">'+icono+'</div><div>' +
+        '<div class="mov-desc">'+(m.Descripcion||m.Categoria)+'</div><div class="mov-meta">'+m.Categoria+'</div></div></div>' +
+        '<div class="mov-amount '+signo+'">'+prefijo+'S/'+Number(m.Monto).toFixed(2)+'</div></div>';
+    }).join('') +
+    (deHoy.length > 4 ? '<p style="font-size:11px; color:var(--text-dim); margin:8px 0 0;">y ' + (deHoy.length-4) + ' más — revisa Historial para verlos todos.</p>' : '');
+}
+function buscarPosibleDuplicado(tipo, monto, categoria, fechaISO){
+  const diaTexto = fechaISO.slice(0,10);
+  return misMovimientos().find(m =>
+    m.Tipo === tipo &&
+    Math.abs(Number(m.Monto) - monto) < 0.01 &&
+    m.Categoria === categoria &&
+    new Date(m.Fecha).toISOString().slice(0,10) === diaTexto &&
+    !esMovimientoTarjetaEspecial(m)
+  );
+}
+let guardandoMovimiento = false;
 function guardarMovimiento(){
+  if (guardandoMovimiento) return;
   const monto = parseFloat(document.getElementById('fMonto').value);
   if (!monto || monto <= 0){ showToast('Ingresa un monto válido'); return; }
   const categoria = document.querySelector('#fCategorias .chip.active')?.textContent || '';
@@ -4001,19 +4034,31 @@ function guardarMovimiento(){
   const fecha = fechaTexto ? new Date(fechaTexto + 'T12:00:00').toISOString() : new Date().toISOString();
   const tags = document.getElementById('fTags').value.trim();
   const pagador = leerPagador('fPagadorPicker');
+  const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
+
+  if (!esCuotas){
+    const duplicado = buscarPosibleDuplicado(tipoActual, monto, categoria, fecha);
+    if (duplicado){
+      const fechaDupTxt = new Date(duplicado.Fecha).toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+      const seguro = confirm('⚠️ Ya tienes registrado "'+(duplicado.Descripcion||duplicado.Categoria)+'" por S/'+Number(duplicado.Monto).toFixed(2)+' el '+fechaDupTxt+' en '+categoria+'.\n\n¿Seguro que quieres registrar esto de nuevo? (puede ser un gasto distinto que coincide justo, o el mismo por error)');
+      if (!seguro) return;
+    }
+  }
+
   let compartido = [];
   if (tipoActual === 'Gasto' && modoDivisionActivo('f') !== 'mio'){
     compartido = leerCompartidoSeleccionado('f');
     if (!compartidoCalzaConMonto(compartido, monto)) return;
   }
-  const esCuotas = tipoActual === 'Gasto' && document.getElementById('fCuotas').checked;
   const accion = esCuotas ? 'addMovimientoCuotas' : 'addMovimiento';
   const payload = esCuotas
     ? { categoria, metodo, montoTotal: monto, numCuotas: parseInt(document.getElementById('fNumCuotas').value) || 2, descripcion, persona: MI_PERSONA, compartido, fechaInicio: fecha, tags, pagador }
     : { tipo: tipoActual, categoria, metodo, monto, descripcion, persona: MI_PERSONA, compartido, fecha, tags, pagador };
+  guardandoMovimiento = true;
   postData(accion, payload).then(res => {
+    guardandoMovimiento = false;
     if (res.error) return;
-    showToast(esCuotas ? 'Cuotas registradas ✅' : 'Registrado ✅');
+    showToast(esCuotas ? 'Cuotas registradas ✅' : (tipoActual + ' registrado ✅'));
     document.getElementById('fMonto').value = '';
     document.getElementById('fDescripcion').value = '';
     document.getElementById('fTags').value = '';
