@@ -825,6 +825,7 @@
       <div class="chip" id="chipIncluirCompartidos" onclick="toggleIncluirCompartidos()">🤝 Incluye compartidos</div>
       <div class="chip" onclick="exportarHistorialCSV()">📄 Exportar CSV</div>
     </div>
+    <div id="filtroTarjetaHistorialBanner" style="display:none;" class="full-width"></div>
     <div class="card full-width" id="listaHistorial"></div>
   </div>
 
@@ -893,11 +894,11 @@
   </div>
 
   <div class="screen" id="screen-tarjetas">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <div class="full-width" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <h2 style="margin:0; font-size:18px;">💳 Tus tarjetas</h2>
       <button class="btn btn-sm btn-secondary" style="width:auto;" onclick="toggleGestionarTarjetas()">⚙️ Editar tarjetas</button>
     </div>
-    <div id="tarjetasVisualTab"></div>
+    <div id="tarjetasVisualTab" class="full-width"></div>
 
     <div class="card full-width" id="gestionarTarjetasWrap" style="display:none;">
       <div class="card-title with-action">
@@ -1332,6 +1333,7 @@ let MI_PIN = localStorage.getItem('finanzas_pin') || '';
 let state = { movimientos: [], deudas: [], config: [], compras: [], productosCompra: [], usoTarjetas: {}, pinsInfo: {}, listaCompras: [], suscripciones: [], pagos: [], activos: [], patrimonioHistorial: [], metasMultiples: [], deudasExternas: [], miRol: 'editor' };
 let tipoActual = 'Gasto';
 let filtroHistorial = 'Todos';
+let filtroHistorialTarjeta = null;
 let incluirCompartidosHistorial = false;
 let pagoActual = null;
 let compraSeleccionadaId = null;
@@ -2698,7 +2700,7 @@ function htmlTarjetaVisual(t){
     '<div style="margin-top:14px;">' + filaCiclo + filaDesglose + filaInteres + '</div>' +
     '<div class="card-title" style="margin-top:16px;">📋 Movimientos recientes</div>' +
     htmlMovimientosTarjeta(t.nombre) +
-    '<button class="btn btn-sm btn-secondary" style="margin-top:10px;" onclick="irA(\'historial\')">Ver todo en Historial →</button>' +
+    '<button class="btn btn-sm btn-secondary" style="margin-top:10px;" onclick="verHistorialDeTarjeta(\''+nombreEsc+'\')">Ver todo en Historial →</button>' +
     '</div>';
 }
 function renderTarjetasResumen(){
@@ -5150,9 +5152,30 @@ function listaHistorialFiltrada(){
   let lista = incluirCompartidosHistorial ? [...state.movimientos] : [...misMovimientos()];
   lista.sort((a,b) => new Date(b.Fecha) - new Date(a.Fecha));
   if (filtroHistorial !== 'Todos') lista = lista.filter(m => m.Tipo === filtroHistorial);
+  if (filtroHistorialTarjeta) lista = lista.filter(m => m.Metodo === filtroHistorialTarjeta || m.Metodo === 'Pago a ' + filtroHistorialTarjeta || m.Metodo === 'Reembolso de ' + filtroHistorialTarjeta);
   return lista;
 }
+function verHistorialDeTarjeta(nombreTarjeta){
+  filtroHistorialTarjeta = nombreTarjeta;
+  irA('historial');
+  renderHistorial();
+}
+function quitarFiltroTarjetaHistorial(){
+  filtroHistorialTarjeta = null;
+  renderHistorial();
+}
+function renderBannerFiltroTarjetaHistorial(){
+  const banner = document.getElementById('filtroTarjetaHistorialBanner');
+  if (!banner) return;
+  if (!filtroHistorialTarjeta){ banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  banner.innerHTML = '<div class="advisor-verdict" style="background:var(--card2); color:var(--text); display:flex; justify-content:space-between; align-items:center; font-size:13px;">' +
+    '<span>💳 Mostrando solo movimientos de <b>'+filtroHistorialTarjeta+'</b></span>' +
+    '<button class="btn btn-sm btn-secondary" style="width:auto;" onclick="quitarFiltroTarjetaHistorial()">✕ Quitar filtro</button>' +
+    '</div>';
+}
 function renderHistorial(){
+  renderBannerFiltroTarjetaHistorial();
   const wrap = document.getElementById('listaHistorial');
   const lista = listaHistorialFiltrada();
   if (!lista.length){ wrap.innerHTML = '<div class="empty">Sin movimientos aún</div>'; return; }
